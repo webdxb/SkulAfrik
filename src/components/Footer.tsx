@@ -12,7 +12,7 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <div className="bg-white rounded-lg p-3 inline-block">
-              <Logo height={28} />
+              <Logo height={36} />
             </div>
             <p className="mt-4 text-sm text-slate-400 max-w-xs">
               The pan-African school management platform. Built for Africa, ready for the world.

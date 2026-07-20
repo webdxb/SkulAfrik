@@ -7,7 +7,7 @@ export function AccessDenied() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-100">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/"><Logo height={32} /></Link>
+          <Link to="/"><Logo height={40} /></Link>
           <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft size={14} /> Accueil</Link>
         </div>
       </header>

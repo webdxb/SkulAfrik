@@ -28,15 +28,15 @@ export function MessagesPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Messagerie" subtitle={`${messages.length} message(s)`} action={<button onClick={() => setShowForm(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Send size={16} /> Nouveau</button>} />
-      {loading ? <div className="p-8 text-center text-sm text-slate-400">Chargement...</div> : messages.length === 0 ? <EmptyState icon={Mail} message="Aucun message." /> : (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
+      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : messages.length === 0 ? <EmptyState icon={Mail} message="Aucun message." /> : (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-50 dark:divide-slate-800">
           {messages.map((m) => {
             const isSender = m.sender_id === user?.id;
             return (
               <div key={m.id} className={`p-4 hover:bg-slate-50/50 ${!m.read_at && !isSender ? 'bg-indigo-50/20' : ''}`}>
-                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${isSender ? 'bg-emerald-500' : 'bg-indigo-500'}`} /><span className="font-medium text-slate-900">{m.subject || '(sans objet)'}</span></div><span className="text-xs text-slate-400">{new Date(m.created_at).toLocaleDateString()}</span></div>
-                <p className="mt-1 text-sm text-slate-600">{m.body}</p>
-                <p className="mt-1 text-xs text-slate-400">{isSender ? 'Envoyé' : 'Reçu'}</p>
+                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${isSender ? 'bg-emerald-500' : 'bg-indigo-500'}`} /><span className="font-medium text-slate-900 dark:text-slate-100">{m.subject || '(sans objet)'}</span></div><span className="text-xs text-slate-400 dark:text-slate-500">{new Date(m.created_at).toLocaleDateString()}</span></div>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{m.body}</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{isSender ? 'Envoyé' : 'Reçu'}</p>
               </div>
             );
           })}
@@ -58,9 +58,9 @@ function MsgForm({ schoolId, senderId, recipients, onClose, onSaved }: { schoolI
   return (
     <Modal title="Nouveau message" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Destinataire</label><select required value={form.recipient_id} onChange={(e) => setForm({ ...form, recipient_id: e.target.value })} className={inputCls}><option value="">Sélectionner...</option>{recipients.map((r) => <option key={r.id} value={r.id}>{r.first_name} {r.last_name} ({r.email})</option>)}</select></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Objet</label><input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Message</label><textarea required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className={inputCls} rows={4} /></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Destinataire</label><select required value={form.recipient_id} onChange={(e) => setForm({ ...form, recipient_id: e.target.value })} className={inputCls}><option value="">Sélectionner...</option>{recipients.map((r) => <option key={r.id} value={r.id}>{r.first_name} {r.last_name} ({r.email})</option>)}</select></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Objet</label><input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className={inputCls} /></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Message</label><textarea required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className={inputCls} rows={4} /></div>
         <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Envoyer'}</button></div>
       </form>
     </Modal>

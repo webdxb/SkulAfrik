@@ -52,7 +52,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
       <aside className={`fixed lg:sticky top-0 z-40 h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-shrink-0 transition-transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-16 flex items-center px-5 border-b border-slate-100 dark:border-slate-800">
-          <Link to="/dashboard"><Logo height={32} /></Link>
+          <Link to="/dashboard"><Logo height={40} /></Link>
         </div>
         <nav className="h-[calc(100vh-4rem)] overflow-y-auto py-4 px-3 space-y-4">
           {groups.map((group) => (

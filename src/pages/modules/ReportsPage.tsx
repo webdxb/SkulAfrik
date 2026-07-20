@@ -41,14 +41,14 @@ export function ReportsPage() {
           <div className="h-48 flex items-end justify-between gap-2">
             {[30, 45, 60, 55, 75, 85, 70, 90].map((h, i) => (<div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-indigo-200 to-indigo-500" style={{ height: `${h}%` }} />))}
           </div>
-          <div className="flex justify-between mt-2 text-xs text-slate-400"><span>Sep</span><span>Oct</span><span>Nov</span><span>Déc</span><span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span></div>
+          <div className="flex justify-between mt-2 text-xs text-slate-400 dark:text-slate-500"><span>Sep</span><span>Oct</span><span>Nov</span><span>Déc</span><span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span></div>
         </Card>
         <Card className="p-6">
           <h3 className="font-sans font-bold text-lg text-slate-900 mb-4">Revenus par mois</h3>
           <div className="h-48 flex items-end justify-between gap-2">
             {[50, 65, 80, 70, 90, 95].map((h, i) => (<div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-emerald-200 to-emerald-500" style={{ height: `${h}%` }} />))}
           </div>
-          <div className="flex justify-between mt-2 text-xs text-slate-400"><span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span><span>Mai</span><span>Juin</span></div>
+          <div className="flex justify-between mt-2 text-xs text-slate-400 dark:text-slate-500"><span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span><span>Mai</span><span>Juin</span></div>
         </Card>
       </div>
       <Card className="p-6">
@@ -56,7 +56,7 @@ export function ReportsPage() {
         <div className="space-y-3">
           {['6ème A', '5ème B', '4ème C', '3ème A', '2nde S', '1ère D'].map((cls, i) => {
             const pct = [85, 72, 68, 90, 55, 45][i];
-            return (<div key={cls} className="flex items-center gap-3"><span className="w-20 text-sm text-slate-600">{cls}</span><div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${pct}%` }} /></div><span className="w-10 text-sm font-medium text-slate-700 text-right">{pct}%</span></div>);
+            return (<div key={cls} className="flex items-center gap-3"><span className="w-20 text-sm text-slate-600 dark:text-slate-400">{cls}</span><div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${pct}%` }} /></div><span className="w-10 text-sm font-medium text-slate-700 text-right">{pct}%</span></div>);
           })}
         </div>
       </Card>

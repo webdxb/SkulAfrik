@@ -39,7 +39,7 @@ export function PaywallPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/"><Logo height={32} /></Link>
+          <Link to="/"><Logo height={40} /></Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact />
             <ThemeToggle />

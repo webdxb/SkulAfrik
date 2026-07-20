@@ -52,7 +52,7 @@ export function SuperAdminApp() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
       <aside className="sticky top-0 z-40 h-screen w-64 bg-slate-900 flex-shrink-0 flex flex-col">
         <div className="h-16 flex items-center px-5 border-b border-slate-800">
-          <Link to="/super-admin"><Logo height={32} variant="dark" /></Link>
+          <Link to="/super-admin"><Logo height={40} variant="dark" /></Link>
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Supervision</p>

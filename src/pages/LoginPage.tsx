@@ -76,7 +76,7 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <Link to="/" className="block text-center mb-8 group">
           <div className="inline-block group-hover:scale-105 transition-transform">
-            <Logo height={48} variant="dark" />
+            <Logo height={56} variant="dark" />
           </div>
           <p className="mt-2 text-sm text-slate-400">School management for Africa</p>
         </Link>

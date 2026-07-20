@@ -45,17 +45,17 @@ export function AttendancePage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Présences" subtitle="Saisie quotidienne" />
-      <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className={inputCls + ' sm:max-w-xs'}><option value="">Sélectionner une classe</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls + ' sm:max-w-xs'} />
         </div>
       </div>
       {selectedClass && students.length === 0 ? <EmptyState icon={Calendar} message="Aucun élève dans cette classe." /> : selectedClass && (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 bg-slate-50/50"><th className="text-left px-4 py-3 font-semibold text-slate-600">Élève</th><th className="text-center px-4 py-3 font-semibold text-slate-600">Statut</th></tr></thead>
-            <tbody className="divide-y divide-slate-50">{students.map((s) => (<tr key={s.id}><td className="px-4 py-3 font-medium text-slate-900">{s.last_name} {s.first_name}</td><td className="px-4 py-3"><div className="flex justify-center gap-2">{([['present','Présent',Check],['late','Retard',Clock],['absent','Absent',X]] as const).map(([st, lbl, Icon]) => (<button key={st} onClick={() => setAttendance({ ...attendance, [s.id]: st })} className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition ${(attendance[s.id] || 'present') === st ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><Icon size={14} /> {lbl}</button>))}</div></td></tr>))}</tbody></table>
-          <div className="flex items-center justify-between p-4 border-t border-slate-100"><span className="text-sm text-slate-500">{students.length} élève(s)</span><div className="flex items-center gap-3">{saved && <span className="text-sm text-emerald-600">Enregistré ✓</span>}<button onClick={save} disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div></div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Élève</th><th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Statut</th></tr></thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">{students.map((s) => (<tr key={s.id}><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.last_name} {s.first_name}</td><td className="px-4 py-3"><div className="flex justify-center gap-2">{([['present','Présent',Check],['late','Retard',Clock],['absent','Absent',X]] as const).map(([st, lbl, Icon]) => (<button key={st} onClick={() => setAttendance({ ...attendance, [s.id]: st })} className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition ${(attendance[s.id] || 'present') === st ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}><Icon size={14} /> {lbl}</button>))}</div></td></tr>))}</tbody></table>
+          <div className="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800"><span className="text-sm text-slate-500 dark:text-slate-400">{students.length} élève(s)</span><div className="flex items-center gap-3">{saved && <span className="text-sm text-emerald-600">Enregistré ✓</span>}<button onClick={save} disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div></div>
         </div>
       )}
     </div>

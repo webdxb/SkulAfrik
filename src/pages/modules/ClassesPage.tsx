@@ -30,9 +30,9 @@ export function ClassesPage() {
       {loading ? <div className="p-8 text-center text-sm text-slate-400">Chargement...</div> : classes.length === 0 ? <EmptyState icon={BookOpen} message="Aucune classe. Les classes sont générées lors de l'onboarding." /> : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((c) => (
-            <div key={c.id} className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between"><div><p className="font-sans font-bold text-lg text-slate-900">{c.name}</p><p className="text-sm text-slate-500">{c.level || '—'} · {c.capacity} places</p></div>
-              <div className="inline-flex gap-1"><button onClick={() => { setEditing(c); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500"><Pencil size={15} /></button><button onClick={() => remove(c.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></div>
+            <div key={c.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between"><div><p className="font-sans font-bold text-lg text-slate-900 dark:text-slate-100">{c.name}</p><p className="text-sm text-slate-500 dark:text-slate-400">{c.level || '—'} · {c.capacity} places</p></div>
+              <div className="inline-flex gap-1"><button onClick={() => { setEditing(c); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(c.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></div>
             </div>
           ))}
         </div>
@@ -54,9 +54,9 @@ function ClassForm({ schoolId, cls, onClose, onSaved }: { schoolId: string; cls:
   return (
     <Modal title={cls ? 'Modifier' : 'Nouvelle classe'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Nom</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Niveau</label><input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Capacité</label><input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} className={inputCls} /></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nom</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} /></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Niveau</label><input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} className={inputCls} /></div>
+        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Capacité</label><input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} className={inputCls} /></div>
         <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
       </form>
     </Modal>

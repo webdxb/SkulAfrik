@@ -27,7 +27,7 @@ export function LandingPage() {
     <div className="min-h-screen bg-white dark:bg-slate-950">
       <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-100 dark:border-slate-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/"><Logo height={36} /></Link>
+          <Link to="/"><Logo height={44} /></Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
             <a href="#features" className="hover:text-slate-900 dark:hover:text-slate-100">Fonctionnalités</a>
             <a href="#roles" className="hover:text-slate-900 dark:hover:text-slate-100">Rôles</a>
@@ -150,7 +150,7 @@ export function LandingPage() {
 
       <footer className="border-t border-slate-100 dark:border-slate-800 py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Logo height={32} />
+          <Logo height={40} />
           <p className="text-sm text-slate-500 dark:text-slate-400">© {new Date().getFullYear()} SKUL AFRIK. Tous droits réservés.</p>
         </div>
       </footer>
