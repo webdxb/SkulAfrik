@@ -1,14 +1,15 @@
 import { AuthProvider, useAuth } from './lib/auth';
-import { RouterProvider, useRoute, navigate } from './lib/router';
+import { RouterProvider, useRoute } from './lib/router';
 import { useEffect } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
+import { OnboardingPage } from './pages/OnboardingPage';
 import { Dashboard } from './pages/Dashboard';
 import { SuperAdminApp } from './pages/SuperAdminApp';
 import { AccessDenied } from './pages/AccessDenied';
 
 function Router() {
-  const { user, school, isSuperAdmin, subscriptionActive, loading } = useAuth();
+  const { user, profile, isSuperAdmin, subscriptionActive, loading } = useAuth();
   const path = useRoute();
 
   useEffect(() => { window.scrollTo(0, 0); }, [path]);
@@ -21,17 +22,24 @@ function Router() {
     return <LandingPage />;
   }
 
-  // Super Admin routing — backend-verified via super_admin_emails table
-  if (isSuperAdmin) {
-    if (path.startsWith('/super-admin') || path === '/dashboard' || path === '/') return <SuperAdminApp />;
-    return <SuperAdminApp />;
+  // Super Admin — full access, no restrictions
+  if (isSuperAdmin) return <SuperAdminApp />;
+
+  // Onboarding not completed → force onboarding
+  if (profile && !profile.onboarding_completed && path !== '/onboarding') {
+    window.history.replaceState({}, '', '/onboarding');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    return <OnboardingPage />;
   }
+  if (path === '/onboarding') return <OnboardingPage />;
 
   // Block non-super-admins from /super-admin URLs
   if (path.startsWith('/super-admin')) return <AccessDenied />;
 
   // Trial expired → paywall (super admins bypass)
-  if (school && !subscriptionActive && path !== '/pricing') return <Dashboard paywall />;
+  if (profile?.school_id && !subscriptionActive && path !== '/pricing') {
+    return <Dashboard paywall />;
+  }
 
   return <Dashboard />;
 }

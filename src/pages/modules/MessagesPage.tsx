@@ -1,68 +1,174 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Send, Mail, Inbox } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
+import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
+import { Send, Plus, MessageSquare, Search } from 'lucide-react';
 
-interface Message { id: string; sender_id: string; recipient_id: string; subject: string; body: string; read_at: string | null; created_at: string }
-
-export function MessagesPage() {
-  const { school, user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [recipients, setRecipients] = useState<any[]>([]);
-
-  const load = useCallback(async () => {
-    if (!school || !user) return;
-    setLoading(true);
-    const { data } = await supabase.from('messages').select('*').eq('school_id', school.id).or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).order('created_at', { ascending: false });
-    setMessages((data || []) as Message[]);
-    const { data: members } = await supabase.from('profiles').select('id, first_name, last_name, email').eq('school_id', school.id).neq('id', user.id);
-    setRecipients(members || []);
-    setLoading(false);
-  }, [school, user]);
-
-  useEffect(() => { load(); }, [load]);
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title="Messagerie" subtitle={`${messages.length} message(s)`} action={<button onClick={() => setShowForm(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Send size={16} /> Nouveau</button>} />
-      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : messages.length === 0 ? <EmptyState icon={Mail} message="Aucun message." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-50 dark:divide-slate-800">
-          {messages.map((m) => {
-            const isSender = m.sender_id === user?.id;
-            return (
-              <div key={m.id} className={`p-4 hover:bg-slate-50/50 ${!m.read_at && !isSender ? 'bg-indigo-50/20' : ''}`}>
-                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${isSender ? 'bg-emerald-500' : 'bg-indigo-500'}`} /><span className="font-medium text-slate-900 dark:text-slate-100">{m.subject || '(sans objet)'}</span></div><span className="text-xs text-slate-400 dark:text-slate-500">{new Date(m.created_at).toLocaleDateString()}</span></div>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{m.body}</p>
-                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{isSender ? 'Envoyé' : 'Reçu'}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {showForm && <MsgForm schoolId={school!.id} senderId={user!.id} recipients={recipients} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
+interface Message {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  subject: string | null;
+  body: string | null;
+  read_at: string | null;
+  created_at: string;
 }
 
-function MsgForm({ schoolId, senderId, recipients, onClose, onSaved }: { schoolId: string; senderId: string; recipients: any[]; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ recipient_id: '', subject: '', body: '' });
-  const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const { error } = await supabase.from('messages').insert({ school_id: schoolId, sender_id: senderId, ...form });
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
+interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export function MessagesPage() {
+  const { school, profile } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [contacts, setContacts] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showCompose, setShowCompose] = useState(false);
+  const [compose, setCompose] = useState({ recipient_id: '', subject: '', body: '' });
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (school && profile) loadData();
+  }, [school, profile]);
+
+  async function loadData() {
+    if (!school || !profile) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('messages')
+      .select('id, sender_id, recipient_id, subject, body, read_at, created_at')
+      .eq('school_id', school.id)
+      .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+      .order('created_at', { ascending: false });
+    const list = (data || []) as Message[];
+    setMessages(list);
+
+    // Load contact names
+    const ids = new Set<string>();
+    list.forEach((m) => { ids.add(m.sender_id); ids.add(m.recipient_id); });
+    if (ids.size > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', [...ids]);
+      const map: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { map[p.id] = `${p.last_name} ${p.first_name}`; });
+      setContacts(map);
+    }
+    setLoading(false);
+  }
+
+  async function handleSend() {
+    if (!school || !profile || !compose.recipient_id) return;
+    setSending(true);
+    await supabase.from('messages').insert({
+      school_id: school.id,
+      sender_id: profile.id,
+      recipient_id: compose.recipient_id,
+      subject: compose.subject || null,
+      body: compose.body || null,
+    });
+    setSending(false);
+    setCompose({ recipient_id: '', subject: '', body: '' });
+    setShowCompose(false);
+    loadData();
+  }
+
+  const filtered = messages.filter((m) => {
+    const q = search.toLowerCase();
+    return (m.subject || '').toLowerCase().includes(q) || (m.body || '').toLowerCase().includes(q);
+  });
+
   return (
-    <Modal title="Nouveau message" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Destinataire</label><select required value={form.recipient_id} onChange={(e) => setForm({ ...form, recipient_id: e.target.value })} className={inputCls}><option value="">Sélectionner...</option>{recipients.map((r) => <option key={r.id} value={r.id}>{r.first_name} {r.last_name} ({r.email})</option>)}</select></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Objet</label><input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Message</label><textarea required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className={inputCls} rows={4} /></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Envoyer'}</button></div>
-      </form>
-    </Modal>
+    <div>
+      <PageHeader title="Messagerie" subtitle="Échangez des messages avec les membres de l'établissement" action={
+        <button onClick={() => setShowCompose(true)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Nouveau message
+        </button>
+      } />
+
+      {!showCompose ? (
+        <>
+          <Card className="mb-4 p-4">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input className={`${inputCls} pl-10`} placeholder="Rechercher un message..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+          </Card>
+
+          {loading ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={MessageSquare} message="Aucun message" action={
+              <button onClick={() => setShowCompose(true)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                <Send size={16} /> Composer un message
+              </button>
+            } />
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((m) => {
+                const isSent = m.sender_id === profile?.id;
+                const otherName = contacts[isSent ? m.recipient_id : m.sender_id] || '—';
+                return (
+                  <Card key={m.id} className={`p-4 ${!m.read_at && !isSent ? 'border-l-4 border-l-indigo-500' : ''}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${isSent ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
+                            {isSent ? 'Envoyé' : 'Reçu'}
+                          </span>
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{isSent ? `À: ${otherName}` : `De: ${otherName}`}</span>
+                          {!m.read_at && !isSent && <span className="h-2 w-2 rounded-full bg-indigo-500" />}
+                        </div>
+                        <h3 className="mt-1 font-medium text-slate-900 dark:text-slate-100">{m.subject || '(Sans objet)'}</h3>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{m.body || ''}</p>
+                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{new Date(m.created_at).toLocaleString('fr-FR')}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">Nouveau message</h2>
+            <button onClick={() => setShowCompose(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl">&times;</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destinataire</label>
+              <select className={inputCls} value={compose.recipient_id} onChange={(e) => setCompose({ ...compose, recipient_id: e.target.value })}>
+                <option value="">Sélectionner un destinataire...</option>
+                {Object.entries(contacts).filter(([id]) => id !== profile?.id).map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Objet</label>
+              <input className={inputCls} value={compose.subject} onChange={(e) => setCompose({ ...compose, subject: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Message</label>
+              <textarea className={inputCls} rows={5} value={compose.body} onChange={(e) => setCompose({ ...compose, body: e.target.value })} />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleSend} disabled={sending || !compose.recipient_id} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                <Send size={16} /> {sending ? 'Envoi...' : 'Envoyer'}
+              </button>
+              <button onClick={() => setShowCompose(false)} className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }

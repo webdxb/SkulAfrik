@@ -1,66 +1,191 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, Book, Search } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
+import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { Plus, Search, Pencil, Trash2, BookOpen } from 'lucide-react';
 
-interface BookRow { id: string; title: string; author: string; isbn: string; category: string; copies_total: number; copies_available: number; shelf_location: string }
+interface Book {
+  id: string;
+  title: string;
+  author: string | null;
+  isbn: string | null;
+  category: string | null;
+  copies_total: number;
+  copies_available: number;
+}
+
+const emptyForm = { title: '', author: '', isbn: '', category: '', copies_total: '', copies_available: '' };
 
 export function LibraryPage() {
   const { school } = useAuth();
-  const [books, setBooks] = useState<BookRow[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<BookRow | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    if (school) loadData();
+  }, [school]);
+
+  async function loadData() {
     if (!school) return;
     setLoading(true);
-    let q = supabase.from('library_books').select('*').eq('school_id', school.id);
-    if (search.trim()) q = q.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
-    const { data } = await q.order('title');
-    setBooks((data || []) as BookRow[]);
+    const { data } = await supabase
+      .from('library_books')
+      .select('id, title, author, isbn, category, copies_total, copies_available')
+      .eq('school_id', school.id)
+      .order('title');
+    setBooks((data || []) as Book[]);
     setLoading(false);
-  }, [school, search]);
+  }
 
-  useEffect(() => { load(); }, [load]);
-  const remove = async (id: string) => { if (confirm('Supprimer ce livre ?')) { await supabase.from('library_books').delete().eq('id', id); load(); } };
+  const filtered = books.filter((b) => {
+    const q = search.toLowerCase();
+    return b.title.toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q) || (b.isbn || '').toLowerCase().includes(q) || (b.category || '').toLowerCase().includes(q);
+  });
+
+  function openAdd() {
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  }
+
+  function openEdit(b: Book) {
+    setEditId(b.id);
+    setForm({ title: b.title, author: b.author || '', isbn: b.isbn || '', category: b.category || '', copies_total: String(b.copies_total || ''), copies_available: String(b.copies_available || '') });
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!school) return;
+    setSaving(true);
+    const total = parseInt(form.copies_total) || 0;
+    const available = form.copies_available !== '' ? parseInt(form.copies_available) : total;
+    const payload = {
+      ...form,
+      school_id: school.id,
+      author: form.author || null,
+      isbn: form.isbn || null,
+      category: form.category || null,
+      publisher: '',
+      copies_total: total,
+      copies_available: available,
+    };
+    if (editId) {
+      await supabase.from('library_books').update(payload).eq('id', editId);
+    } else {
+      await supabase.from('library_books').insert(payload);
+    }
+    setSaving(false);
+    setModalOpen(false);
+    loadData();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer ce livre ?')) return;
+    await supabase.from('library_books').delete().eq('id', id);
+    loadData();
+  }
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Bibliothèque" subtitle={`${books.length} livre(s)`} action={<button onClick={() => { setEditing(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Ajouter</button>} />
-      <div className="relative max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher..." className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" /></div>
-      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : books.length === 0 ? <EmptyState icon={Book} message="Aucun livre dans la bibliothèque." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Titre</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Auteur</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Catégorie</th><th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Dispo</th><th className="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Actions</th></tr></thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">{books.map((b) => (<tr key={b.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{b.title}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400 dark:text-slate-400">{b.author || '—'}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400 dark:text-slate-400">{b.category || '—'}</td><td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">{b.copies_available}/{b.copies_total}</td><td className="px-4 py-3 text-right"><div className="inline-flex gap-1"><button onClick={() => { setEditing(b); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(b.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></td></tr>))}</tbody></table>
+    <div>
+      <PageHeader title="Bibliothèque" subtitle="Gérez le catalogue de la bibliothèque" action={
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Ajouter
+        </button>
+      } />
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher un livre..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-      )}
-      {showForm && <BookForm schoolId={school!.id} book={editing} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
-}
+      </Card>
 
-function BookForm({ schoolId, book, onClose, onSaved }: { schoolId: string; book: BookRow | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ title: book?.title || '', author: book?.author || '', isbn: book?.isbn || '', category: book?.category || '', copies_total: book?.copies_total || 1, shelf_location: book?.shelf_location || '' });
-  const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const copies = Number(form.copies_total);
-    const payload = { school_id: schoolId, ...form, copies_total: copies, copies_available: book ? undefined : copies };
-    const { error } = book ? await supabase.from('library_books').update({ title: form.title, author: form.author, isbn: form.isbn, category: form.category, copies_total: copies, shelf_location: form.shelf_location }).eq('id', book.id) : await supabase.from('library_books').insert({ school_id: schoolId, ...form, copies_total: copies, copies_available: copies });
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
-  return (
-    <Modal title={book ? 'Modifier' : 'Nouveau livre'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Titre</label><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Auteur</label><input value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} className={inputCls} /></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">ISBN</label><input value={form.isbn} onChange={(e) => setForm({ ...form, isbn: e.target.value })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Catégorie</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls} /></div></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Exemplaires</label><input type="number" min="1" value={form.copies_total} onChange={(e) => setForm({ ...form, copies_total: Number(e.target.value) })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Étagère</label><input value={form.shelf_location} onChange={(e) => setForm({ ...form, shelf_location: e.target.value })} className={inputCls} /></div></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={BookOpen} message="Aucun livre trouvé" action={
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus size={16} /> Ajouter un livre
+          </button>
+        } />
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Titre</th>
+                <th className="px-4 py-3 font-semibold">Auteur</th>
+                <th className="px-4 py-3 font-semibold">ISBN</th>
+                <th className="px-4 py-3 font-semibold">Catégorie</th>
+                <th className="px-4 py-3 font-semibold">Exemplaires</th>
+                <th className="px-4 py-3 font-semibold">Disponibles</th>
+                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((b) => (
+                <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{b.title}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{b.author || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{b.isbn || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{b.category || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{b.copies_total}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${b.copies_available > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                      {b.copies_available}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex gap-2">
+                      <button onClick={() => openEdit(b)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(b.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {modalOpen && (
+        <Modal title={editId ? 'Modifier le livre' : 'Ajouter un livre'} onClose={() => setModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Titre</label>
+              <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Auteur</label>
+              <input className={inputCls} value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">ISBN</label>
+              <input className={inputCls} value={form.isbn} onChange={(e) => setForm({ ...form, isbn: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Catégorie</label>
+              <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Ex: Mathématiques, Romans..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Exemplaires totaux</label>
+              <input type="number" className={inputCls} value={form.copies_total} onChange={(e) => setForm({ ...form, copies_total: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Exemplaires disponibles</label>
+              <input type="number" className={inputCls} value={form.copies_available} onChange={(e) => setForm({ ...form, copies_available: e.target.value })} placeholder="Laisser vide = total" />
+            </div>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

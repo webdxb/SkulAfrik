@@ -1,103 +1,284 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { GraduationCap, BookOpen, Calendar, CheckCircle, TrendingUp, ClipboardList, ChevronRight } from 'lucide-react';
-import { Link } from '../../lib/router';
+import { navigate } from '../../lib/router';
+import { PageHeader, Card, EmptyState } from '../../components/ui';
+import {
+  GraduationCap,
+  BarChart3,
+  ClipboardCheck,
+  Calendar,
+  TrendingUp,
+  Award,
+} from 'lucide-react';
+
+interface GradeRow {
+  id: string;
+  value: number;
+  created_at: string;
+  subject_name: string | null;
+  coefficient: number | null;
+}
+
+interface EventRow {
+  id: string;
+  title: string;
+  start_date: string;
+  type: string | null;
+}
+
+function formatGrade(value: number | null): string {
+  if (value === null || value === undefined) return '—';
+  return value.toFixed(2);
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null || value === undefined) return '—';
+  return `${value.toFixed(1)} %`;
+}
+
+function formatEventDate(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
 
 export function StudentDashboard() {
   const { profile, school } = useAuth();
-  const [stats, setStats] = useState({ average: '—', rank: '—', attendance: '—', homework: 0 });
-  const [recentGrades, setRecentGrades] = useState<any[]>([]);
-  const [schedule, setSchedule] = useState<any[]>([]);
+  const [averageGrade, setAverageGrade] = useState<number | null>(null);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
+  const [recentGrades, setRecentGrades] = useState<GradeRow[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventRow[]>([]);
+  const [className, setClassName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
     (async () => {
-      if (!profile) return;
-      const [gr, att, hw, cs] = await Promise.all([
-        supabase.from('grades').select('score, subjects(name), created_at').eq('student_id', profile.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('attendance').select('status').eq('student_id', profile.id),
-        supabase.from('grades').select('id', { count: 'exact', head: true }).eq('student_id', profile.id),
-        school ? supabase.from('calendar_events').select('*').eq('school_id', school.id).gte('start_time', new Date().toISOString().split('T')[0]).limit(5) : Promise.resolve({ data: [] }),
-      ]);
-      const grades = gr.data || [];
-      if (grades.length > 0) {
-        const avg = grades.reduce((s: number, g: any) => s + Number(g.score), 0) / grades.length;
-        setStats((prev) => ({ ...prev, average: avg.toFixed(1) }));
+      setLoading(true);
+
+      // Find the student record linked to this profile
+      const { data: eleve } = await supabase
+        .from('eleves')
+        .select('id, class_id')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (!eleve) {
+        setLoading(false);
+        return;
       }
-      const attData = att.data || [];
-      if (attData.length > 0) {
-        const present = attData.filter((a: any) => a.status === 'present').length;
-        setStats((prev) => ({ ...prev, attendance: `${Math.round((present / attData.length) * 100)}%` }));
+
+      // Class name
+      if (eleve.class_id) {
+        const { data: cls } = await supabase
+          .from('classes')
+          .select('name')
+          .eq('id', eleve.class_id)
+          .maybeSingle();
+        if (!cancelled) setClassName(cls?.name || null);
       }
-      setStats((prev) => ({ ...prev, homework: hw.count || 0 }));
-      setRecentGrades(grades);
-      setSchedule(cs.data || []);
+
+      // Grades
+      const { data: grades } = await supabase
+        .from('grades')
+        .select('id, value, created_at, coefficient, subject:subjects(name)')
+        .eq('eleve_id', eleve.id)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (cancelled) return;
+      const gradeRows = (grades || []).map((r: any) => ({
+        id: r.id,
+        value: r.value,
+        created_at: r.created_at,
+        subject_name: r.subject?.name || null,
+        coefficient: r.coefficient,
+      }));
+      setRecentGrades(gradeRows);
+
+      // Weighted average
+      const allGrades = (grades || []) as any[];
+      if (allGrades.length > 0) {
+        let totalWeighted = 0;
+        let totalCoeff = 0;
+        for (const g of allGrades) {
+          const coeff = g.coefficient || 1;
+          totalWeighted += (g.value || 0) * coeff;
+          totalCoeff += coeff;
+        }
+        setAverageGrade(totalCoeff > 0 ? totalWeighted / totalCoeff : null);
+      }
+
+      // Attendance rate
+      const { count: presentCount } = await supabase
+        .from('attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('eleve_id', eleve.id)
+        .eq('status', 'present');
+      const { count: totalCount } = await supabase
+        .from('attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('eleve_id', eleve.id);
+
+      if (cancelled) return;
+      if (totalCount && totalCount > 0) {
+        setAttendanceRate(((presentCount || 0) / totalCount) * 100);
+      }
+
+      // Upcoming events
+      const nowIso = new Date().toISOString();
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, title, start_date, type')
+        .gte('start_date', nowIso)
+        .order('start_date', { ascending: true })
+        .limit(5);
+
+      if (cancelled) return;
+      setUpcomingEvents((events || []) as EventRow[]);
       setLoading(false);
     })();
-  }, [profile, school]);
+    return () => { cancelled = true; };
+  }, [profile?.id]);
 
-  const cards = [
-    { label: 'Ma moyenne', value: stats.average, icon: GraduationCap, color: 'border-l-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/20', iconColor: 'text-indigo-600 dark:text-indigo-400' },
-    { label: 'Rang', value: stats.rank, icon: TrendingUp, color: 'border-l-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', iconColor: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Présence', value: stats.attendance, icon: CheckCircle, color: 'border-l-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20', iconColor: 'text-amber-600 dark:text-amber-400' },
-    { label: 'Évaluations', value: stats.homework, icon: BookOpen, color: 'border-l-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', iconColor: 'text-rose-600 dark:text-rose-400' },
-  ];
+  if (!profile) {
+    return <EmptyState icon={GraduationCap} message="Profil introuvable. Veuillez vous reconnecter." />;
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Salut, {profile?.first_name || 'Élève'} !</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Voici ta journée scolaire du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}.</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((c) => (
-          <div key={c.label} className={`bg-white dark:bg-slate-900 rounded-xl border-l-4 ${c.color} border-y border-r border-slate-100 dark:border-slate-800 p-5 shadow-sm`}>
-            <div className="flex items-center justify-between">
-              <div><p className="text-sm text-slate-500 dark:text-slate-400">{c.label}</p><p className="mt-1 font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">{c.value}</p></div>
-              <div className={`h-11 w-11 rounded-lg ${c.bg} flex items-center justify-center`}><c.icon className={c.iconColor} size={22} /></div>
+    <div>
+      <PageHeader
+        title={`Bonjour, ${profile.first_name || 'Élève'}`}
+        subtitle={school?.name ? `${school.name}${className ? ` · ${className}` : ''}` : 'Espace élève'}
+      />
+
+      {/* Key stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Moyenne générale</span>
+            <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 p-2">
+              <TrendingUp className="text-indigo-600 dark:text-indigo-400" size={18} />
             </div>
           </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading text-lg font-semibold text-slate-900 dark:text-slate-100">Mes dernières notes</h3>
-            <Link to="/dashboard/grades" className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1">Voir tout <ChevronRight size={14} /></Link>
+          <p className="font-heading text-4xl font-bold text-slate-900 dark:text-slate-100">
+            {loading ? '—' : formatGrade(averageGrade)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Sur 20</p>
+        </Card>
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Taux de présence</span>
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 p-2">
+              <ClipboardCheck className="text-emerald-600 dark:text-emerald-400" size={18} />
+            </div>
           </div>
-          {loading ? <p className="text-sm text-slate-400">Chargement...</p> : recentGrades.length === 0 ? (
-            <div className="flex flex-col items-center py-8"><BookOpen size={32} className="text-slate-300 dark:text-slate-700" /><p className="mt-3 text-sm text-slate-400">Aucune note disponible.</p></div>
-          ) : (
-            <div className="space-y-2">{recentGrades.map((g, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg p-2 hover:bg-slate-50 dark:hover:bg-slate-800">
-                <div><p className="text-sm font-medium text-slate-900 dark:text-slate-100">{g.subjects?.name || '—'}</p><p className="text-xs text-slate-400">{new Date(g.created_at).toLocaleDateString('fr-FR')}</p></div>
-                <span className="font-heading text-lg font-bold text-indigo-600 dark:text-indigo-400">{g.score}/20</span>
-              </div>
-            ))}</div>
-          )}
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading text-lg font-semibold text-slate-900 dark:text-slate-100">Prochains cours</h3>
-            <Link to="/dashboard/calendar" className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1">Agenda <ChevronRight size={14} /></Link>
+          <p className="font-heading text-4xl font-bold text-slate-900 dark:text-slate-100">
+            {loading ? '—' : formatPercent(attendanceRate)}
+          </p>
+          <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${attendanceRate || 0}%` }}
+            />
           </div>
-          {loading ? <p className="text-sm text-slate-400">Chargement...</p> : schedule.length === 0 ? (
-            <div className="flex flex-col items-center py-8"><Calendar size={32} className="text-slate-300 dark:text-slate-700" /><p className="mt-3 text-sm text-slate-400">Aucun cours à venir.</p></div>
-          ) : (
-            <div className="space-y-3">{schedule.map((e, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-3">
-                <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0"><Calendar size={18} className="text-indigo-600 dark:text-indigo-400" /></div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{e.title}</p><p className="text-xs text-slate-400">{e.start_time ? new Date(e.start_time).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</p></div>
-              </div>
-            ))}</div>
-          )}
-        </div>
+        </Card>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Link to="/dashboard/grades" className="flex items-center gap-3 rounded-xl bg-indigo-600 p-4 text-white shadow-sm hover:shadow-md transition-shadow"><BookOpen size={20} /><span className="text-sm font-semibold">Mes notes</span><ChevronRight size={16} className="ml-auto" /></Link>
-        <Link to="/dashboard/attendance" className="flex items-center gap-3 rounded-xl bg-emerald-600 p-4 text-white shadow-sm hover:shadow-md transition-shadow"><CheckCircle size={20} /><span className="text-sm font-semibold">Mes présences</span><ChevronRight size={16} className="ml-auto" /></Link>
-        <Link to="/dashboard/calendar" className="flex items-center gap-3 rounded-xl bg-amber-600 p-4 text-white shadow-sm hover:shadow-md transition-shadow"><ClipboardList size={20} /><span className="text-sm font-semibold">Mon emploi du temps</span><ChevronRight size={16} className="ml-auto" /></Link>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent grades */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Notes récentes
+            </h2>
+            <button
+              onClick={() => navigate('/dashboard/grades')}
+              className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Tout voir
+            </button>
+          </div>
+          <Card className="p-5">
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-14 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                ))}
+              </div>
+            ) : recentGrades.length === 0 ? (
+              <EmptyState icon={BarChart3} message="Aucune note disponible pour le moment." />
+            ) : (
+              <ul className="space-y-3">
+                {recentGrades.map((g) => (
+                  <li key={g.id} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                    <div className="flex h-10 w-12 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40">
+                      <span className="font-heading text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                        {g.value.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                        {g.subject_name || 'Matière'}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Coeff. {g.coefficient || 1}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+
+        {/* Upcoming events */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Événements à venir
+            </h2>
+            <button
+              onClick={() => navigate('/dashboard/calendar')}
+              className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Calendrier
+            </button>
+          </div>
+          <Card className="p-5">
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-14 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                ))}
+              </div>
+            ) : upcomingEvents.length === 0 ? (
+              <EmptyState icon={Calendar} message="Aucun événement à venir." />
+            ) : (
+              <ul className="space-y-3">
+                {upcomingEvents.map((e) => (
+                  <li key={e.id} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
+                      <Award className="text-amber-600 dark:text-amber-400" size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                        {e.title}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {formatEventDate(e.start_date)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

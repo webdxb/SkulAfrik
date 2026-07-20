@@ -1,62 +1,201 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
+import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { Plus, Search, Pencil, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
-interface Event { id: string; title: string; event_type: string; start_date: string; end_date: string; description: string }
-
-export function CalendarPage() {
-  const { school } = useAuth();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Event | null>(null);
-
-  const load = useCallback(async () => {
-    if (!school) return;
-    setLoading(true);
-    const { data } = await supabase.from('calendar_events').select('*').eq('school_id', school.id).order('start_date');
-    setEvents((data || []) as Event[]);
-    setLoading(false);
-  }, [school]);
-
-  useEffect(() => { load(); }, [load]);
-  const remove = async (id: string) => { if (confirm('Supprimer cet événement ?')) { await supabase.from('calendar_events').delete().eq('id', id); load(); } };
-
-  const typeColor = (t: string) => ({ holiday: 'bg-rose-50 text-rose-700', exam: 'bg-amber-50 text-amber-700', meeting: 'bg-indigo-50 text-indigo-700', event: 'bg-emerald-50 text-emerald-700' } as Record<string,string>)[t] || 'bg-slate-50 text-slate-600';
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title="Calendrier" subtitle={`${events.length} événement(s)`} action={<button onClick={() => { setEditing(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Ajouter</button>} />
-      {loading ? <div className="p-8 text-center text-sm text-slate-400">Chargement...</div> : events.length === 0 ? <EmptyState icon={Calendar} message="Aucun événement." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="divide-y divide-slate-50 dark:divide-slate-800">{events.map((e) => (<div key={e.id} className="flex items-center justify-between p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/50"><div className="flex items-center gap-3"><div className={`rounded-lg px-2.5 py-1 text-xs font-medium ${typeColor(e.event_type)}`}>{e.event_type}</div><div><p className="font-medium text-slate-900 dark:text-slate-100">{e.title}</p><p className="text-sm text-slate-500 dark:text-slate-400">{e.start_date} {e.end_date && `→ ${e.end_date}`}</p></div></div><div className="flex gap-1"><button onClick={() => { setEditing(e); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(e.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></div>))}</div>
-        </div>
-      )}
-      {showForm && <EventForm schoolId={school!.id} event={editing} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_type: string;
+  start_at: string;
+  end_at: string | null;
 }
 
-function EventForm({ schoolId, event, onClose, onSaved }: { schoolId: string; event: Event | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ title: event?.title || '', event_type: event?.event_type || 'event', start_date: event?.start_date || '', end_date: event?.end_date || '', description: event?.description || '' });
+const emptyForm = { title: '', description: '', event_type: 'event', start_time: '', end_time: '' };
+
+export function CalendarPage() {
+  const { school, profile } = useAuth();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const payload = { school_id: schoolId, ...form };
-    const { error } = event ? await supabase.from('calendar_events').update(payload).eq('id', event.id) : await supabase.from('calendar_events').insert(payload);
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
+
+  useEffect(() => {
+    if (school) loadData();
+  }, [school]);
+
+  async function loadData() {
+    if (!school) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('calendar_events')
+      .select('id, title, description, event_type, start_at, end_at')
+      .eq('school_id', school.id)
+      .order('start_at', { ascending: false });
+    setEvents((data || []) as CalendarEvent[]);
+    setLoading(false);
+  }
+
+  const filtered = events.filter((e) => {
+    const q = search.toLowerCase();
+    return e.title.toLowerCase().includes(q) || (e.event_type || '').toLowerCase().includes(q);
+  });
+
+  function openAdd() {
+    setEditId(null);
+    const now = new Date().toISOString().slice(0, 16);
+    setForm({ ...emptyForm, start_time: now, end_time: now });
+    setModalOpen(true);
+  }
+
+  function openEdit(e: CalendarEvent) {
+    setEditId(e.id);
+    setForm({
+      title: e.title,
+      description: e.description || '',
+      event_type: e.event_type || 'event',
+      start_time: e.start_at ? e.start_at.slice(0, 16) : '',
+      end_time: e.end_at ? e.end_at.slice(0, 16) : '',
+    });
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!school || !profile) return;
+    setSaving(true);
+    const payload = {
+      school_id: school.id,
+      title: form.title,
+      description: form.description || null,
+      event_type: form.event_type,
+      start_at: form.start_time ? new Date(form.start_time).toISOString() : null,
+      end_at: form.end_time ? new Date(form.end_time).toISOString() : null,
+      target_audience: 'all',
+      created_by: profile.id,
+    };
+    if (editId) {
+      await supabase.from('calendar_events').update(payload).eq('id', editId);
+    } else {
+      await supabase.from('calendar_events').insert(payload);
+    }
+    setSaving(false);
+    setModalOpen(false);
+    loadData();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cet événement ?')) return;
+    await supabase.from('calendar_events').delete().eq('id', id);
+    loadData();
+  }
+
+  const typeLabels: Record<string, string> = {
+    event: 'Événement',
+    holiday: 'Férié',
+    exam: 'Examen',
+    meeting: 'Réunion',
+    deadline: 'Échéance',
   };
+
+  const typeColors: Record<string, string> = {
+    event: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+    holiday: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+    exam: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    meeting: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    deadline: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  };
+
   return (
-    <Modal title={event ? 'Modifier' : 'Nouvel événement'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Titre</label><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Type</label><select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })} className={inputCls}><option value="event">Événement</option><option value="holiday">Vacance</option><option value="exam">Examen</option><option value="meeting">Réunion</option></select></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Début</label><input type="date" required value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Fin</label><input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className={inputCls} /></div></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} rows={3} /></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+    <div>
+      <PageHeader title="Calendrier" subtitle="Événements et dates importantes" action={
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Ajouter
+        </button>
+      } />
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher un événement..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </Card>
+
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={CalendarIcon} message="Aucun événement trouvé" action={
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus size={16} /> Ajouter un événement
+          </button>
+        } />
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((e) => (
+            <Card key={e.id} className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-medium text-slate-900 dark:text-slate-100">{e.title}</h3>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[e.event_type] || typeColors.event}`}>
+                      {typeLabels[e.event_type] || e.event_type}
+                    </span>
+                  </div>
+                  {e.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{e.description}</p>}
+                  <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-1"><Clock size={14} /> {new Date(e.start_at).toLocaleString('fr-FR')}</span>
+                    {e.end_at && <span className="inline-flex items-center gap-1"><Clock size={14} /> → {new Date(e.end_at).toLocaleString('fr-FR')}</span>}
+                  </div>
+                </div>
+                <div className="inline-flex gap-2">
+                  <button onClick={() => openEdit(e)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
+                  <button onClick={() => handleDelete(e.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <Modal title={editId ? 'Modifier l\'événement' : 'Ajouter un événement'} onClose={() => setModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Titre</label>
+              <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
+              <select className={inputCls} value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })}>
+                <option value="event">Événement</option>
+                <option value="holiday">Férié</option>
+                <option value="exam">Examen</option>
+                <option value="meeting">Réunion</option>
+                <option value="deadline">Échéance</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+              <textarea className={inputCls} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Début</label>
+              <input type="datetime-local" className={inputCls} value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Fin</label>
+              <input type="datetime-local" className={inputCls} value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+            </div>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

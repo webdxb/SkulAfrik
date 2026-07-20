@@ -1,38 +1,33 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from './supabase';
 
-export type Role = 'super_admin' | 'admin' | 'teacher' | 'staff' | 'parent' | 'student';
-
 export interface Profile {
   id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
-  role: Role;
+  phone: string | null;
+  role: string;
   school_id: string | null;
-  phone?: string | null;
+  custom_role_id: string | null;
+  sales_code: string | null;
+  onboarding_completed: boolean;
 }
 
 export interface School {
   id: string;
   name: string;
-  legal_name: string | null;
-  country: string;
-  region: string | null;
+  country: string | null;
   city: string | null;
-  currency: string;
-  language: string;
-  verification_status: string;
-  subscription_status: string;
-  trial_ends_at: string;
-  plan_id: string | null;
-  director_name: string | null;
-  director_email: string | null;
+  school_type: string;
   phone: string | null;
+  email: string | null;
   address: string | null;
+  logo_url: string | null;
+  trial_ends_at: string | null;
 }
 
-interface AuthState {
+interface AuthContextValue {
   user: any | null;
   profile: Profile | null;
   school: School | null;
@@ -40,27 +35,14 @@ interface AuthState {
   subscriptionActive: boolean;
   planModules: string[] | null;
   loading: boolean;
-  refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthState>({} as AuthState);
-
-function normalizeRole(dbRole: string): Role {
-  const map: Record<string, Role> = {
-    'super_admin': 'super_admin',
-    'school_admin': 'admin',
-    'admin': 'admin',
-    'teacher': 'teacher',
-    'staff': 'staff',
-    'parent': 'parent',
-    'student': 'student',
-  };
-  return map[dbRole] || 'admin';
-}
+const AuthContext = createContext<AuthContextValue>({} as AuthContextValue);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -69,31 +51,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = async (u: any) => {
-    if (!u) { setProfile(null); setSchool(null); setIsSuperAdmin(false); setSubscriptionActive(true); setPlanModules(null); return; }
-    // Check super admin first — before any school/subscription logic
+    if (!u) {
+      setProfile(null); setSchool(null); setIsSuperAdmin(false);
+      setSubscriptionActive(true); setPlanModules(null); return;
+    }
+    // Check super admin first
     const { data: sa } = await supabase.from('super_admin_emails').select('email').eq('email', u.email).maybeSingle();
     const superAdmin = !!sa;
     setIsSuperAdmin(superAdmin);
-    // Super admins have full access, no restrictions
     if (superAdmin) {
-      setProfile({ id: u.id, email: u.email, first_name: null, last_name: null, role: 'super_admin', school_id: null, phone: null });
+      setProfile({ id: u.id, email: u.email, first_name: null, last_name: null, phone: null, role: 'super_admin', school_id: null, custom_role_id: null, sales_code: null, onboarding_completed: true });
       setSchool(null);
       setSubscriptionActive(true);
       setPlanModules(null);
       return;
     }
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
-    const normalizedProf = prof ? { ...prof, role: normalizeRole(prof.role), email: u.email } : null;
-    setProfile(normalizedProf as Profile | null);
-    let schoolData: School | null = null;
-    if (normalizedProf?.school_id) {
-      const { data: sch } = await supabase.from('schools').select('*').eq('id', normalizedProf.school_id).maybeSingle();
-      schoolData = sch as School | null;
-      setSchool(schoolData);
-      if (schoolData) {
-        const { data: active } = await supabase.rpc('school_subscription_active', { school_id: schoolData.id });
+    const p = prof as Profile | null;
+    setProfile(p ? { ...p, email: u.email } : null);
+    if (p?.school_id) {
+      const { data: sch } = await supabase.from('schools').select('*').eq('id', p.school_id).maybeSingle();
+      setSchool(sch as School | null);
+      if (sch) {
+        const { data: active } = await supabase.rpc('school_subscription_active', { school_id: sch.id });
         setSubscriptionActive(!!active);
-        const { data: mods } = await supabase.rpc('school_plan_modules', { school_id: schoolData.id });
+        const { data: mods } = await supabase.rpc('school_plan_modules', { school_id: sch.id });
         setPlanModules(mods || null);
       }
     } else {
@@ -102,28 +84,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) { setUser(session.user); await loadProfile(session.user); }
-      setLoading(false);
-    })();
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, session) => {
-      if (session?.user) { setUser(session.user); await loadProfile(session.user); }
-      else { setUser(null); await loadProfile(null); }
-      setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
-    return () => sub.subscription.unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        (async () => { await loadProfile(session.user); })();
+      } else {
+        loadProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const refresh = async () => { if (user) await loadProfile(user); };
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null); setProfile(null); setSchool(null); setIsSuperAdmin(false);
-    setSubscriptionActive(true); setPlanModules(null);
   };
 
+  const refresh = async () => { if (user) await loadProfile(user); };
+
   return (
-    <AuthContext.Provider value={{ user, profile, school, isSuperAdmin, subscriptionActive, planModules, loading, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, profile, school, isSuperAdmin, subscriptionActive, planModules, loading, signOut, refresh }}>
       {children}
     </AuthContext.Provider>
   );

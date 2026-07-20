@@ -1,64 +1,155 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, BookOpen } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
 
-interface Subject { id: string; name: string; code: string | null; coefficient: number }
+interface Subject {
+  id: string;
+  name: string;
+  code: string | null;
+  coefficient: number;
+}
+
+const emptyForm = { name: '', coefficient: '' };
 
 export function SubjectsPage() {
   const { school } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Subject | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    if (school) loadData();
+  }, [school]);
+
+  async function loadData() {
     if (!school) return;
     setLoading(true);
-    let q = supabase.from('subjects').select('*').eq('school_id', school.id);
-    if (search.trim()) q = q.ilike('name', `%${search}%`);
-    const { data } = await q.order('name');
+    const { data } = await supabase
+      .from('subjects')
+      .select('id, name, code, coefficient')
+      .eq('school_id', school.id)
+      .order('name');
     setSubjects((data || []) as Subject[]);
     setLoading(false);
-  }, [school, search]);
+  }
 
-  useEffect(() => { load(); }, [load]);
-  const remove = async (id: string) => { if (confirm('Supprimer cette matière ?')) { await supabase.from('subjects').delete().eq('id', id); load(); } };
+  const filtered = subjects.filter((s) => {
+    const q = search.toLowerCase();
+    return s.name.toLowerCase().includes(q);
+  });
+
+  function openAdd() {
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  }
+
+  function openEdit(s: Subject) {
+    setEditId(s.id);
+    setForm({ name: s.name, coefficient: String(s.coefficient || '') });
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!school) return;
+    setSaving(true);
+    const payload = {
+      ...form,
+      school_id: school.id,
+      coefficient: parseFloat(form.coefficient) || 1,
+    };
+    if (editId) {
+      await supabase.from('subjects').update(payload).eq('id', editId);
+    } else {
+      await supabase.from('subjects').insert(payload);
+    }
+    setSaving(false);
+    setModalOpen(false);
+    loadData();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cette matière ?')) return;
+    await supabase.from('subjects').delete().eq('id', id);
+    loadData();
+  }
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Matières" subtitle={`${subjects.length} matière(s)`} action={<button onClick={() => { setEditing(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Ajouter</button>} />
-      <div className="relative max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher..." className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" /></div>
-      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : subjects.length === 0 ? <EmptyState icon={BookOpen} message="Aucune matière. Les matières sont générées lors de l'onboarding." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Matière</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Code</th><th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Coefficient</th><th className="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Actions</th></tr></thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">{subjects.map((s) => (<tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400 dark:text-slate-400">{s.code || '—'}</td><td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">{s.coefficient}</td><td className="px-4 py-3 text-right"><div className="inline-flex gap-1"><button onClick={() => { setEditing(s); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(s.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></td></tr>))}</tbody></table>
+    <div>
+      <PageHeader title="Matières" subtitle="Gérez les matières enseignées" action={
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Ajouter
+        </button>
+      } />
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher une matière..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-      )}
-      {showForm && <SubjectForm schoolId={school!.id} subject={editing} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
-}
+      </Card>
 
-function SubjectForm({ schoolId, subject, onClose, onSaved }: { schoolId: string; subject: Subject | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ name: subject?.name || '', code: subject?.code || '', coefficient: subject?.coefficient || 1 });
-  const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const payload = { school_id: schoolId, name: form.name, code: form.code || null, coefficient: Number(form.coefficient) };
-    const { error } = subject ? await supabase.from('subjects').update(payload).eq('id', subject.id) : await supabase.from('subjects').insert(payload);
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
-  return (
-    <Modal title={subject ? 'Modifier' : 'Nouvelle matière'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nom</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Code</label><input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Coefficient</label><input type="number" step="0.5" value={form.coefficient} onChange={(e) => setForm({ ...form, coefficient: Number(e.target.value) })} className={inputCls} /></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={BookOpen} message="Aucune matière trouvée" action={
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus size={16} /> Ajouter une matière
+          </button>
+        } />
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Nom</th>
+                <th className="px-4 py-3 font-semibold">Code</th>
+                <th className="px-4 py-3 font-semibold">Coefficient</th>
+                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.code || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.coefficient}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex gap-2">
+                      <button onClick={() => openEdit(s)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(s.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {modalOpen && (
+        <Modal title={editId ? 'Modifier la matière' : 'Ajouter une matière'} onClose={() => setModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nom</label>
+              <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Coefficient</label>
+              <input type="number" step="0.5" className={inputCls} value={form.coefficient} onChange={(e) => setForm({ ...form, coefficient: e.target.value })} />
+            </div>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

@@ -1,62 +1,106 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Search, Pencil, Trash2, GraduationCap } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
+import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
+import { Search, Users, Phone } from 'lucide-react';
 
-interface Teacher { id: string; first_name: string; last_name: string; email: string; phone: string; subject: string }
+interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  role: string;
+}
 
 export function TeachersPage() {
   const { school } = useAuth();
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teachers, setTeachers] = useState<Profile[]>([]);
+  const [classCounts, setClassCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Teacher | null>(null);
 
-  const load = useCallback(async () => {
-    if (!school) return;
-    setLoading(true);
-    const { data } = await supabase.from('profiles').select('*').eq('school_id', school.id).eq('role', 'teacher').order('last_name');
-    setTeachers((data || []) as Teacher[]);
-    setLoading(false);
+  useEffect(() => {
+    if (school) loadData();
   }, [school]);
 
-  useEffect(() => { load(); }, [load]);
+  async function loadData() {
+    if (!school) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, phone, role')
+      .eq('role', 'teacher')
+      .eq('school_id', school.id)
+      .order('last_name');
+    const list = (data || []) as Profile[];
+    setTeachers(list);
 
-  const remove = async (id: string) => { if (confirm('Supprimer cet enseignant ?')) { await supabase.from('profiles').delete().eq('id', id); load(); } };
+    const counts: Record<string, number> = {};
+    if (list.length > 0) {
+      const { data: links } = await supabase
+        .from('class_subjects')
+        .select('teacher_id')
+        .in('teacher_id', list.map((t) => t.id));
+      (links || []).forEach((l: any) => {
+        counts[l.teacher_id] = (counts[l.teacher_id] || 0) + 1;
+      });
+    }
+    setClassCounts(counts);
+    setLoading(false);
+  }
+
+  const filtered = teachers.filter((t) => {
+    const q = search.toLowerCase();
+    return `${t.first_name} ${t.last_name}`.toLowerCase().includes(q);
+  });
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Enseignants" subtitle={`${teachers.length} enseignant(s)`} action={<button onClick={() => { setEditing(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Ajouter</button>} />
-      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : teachers.length === 0 ? <EmptyState icon={GraduationCap} message="Aucun enseignant enregistré." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Nom</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Email</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Téléphone</th><th className="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Actions</th></tr></thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">{teachers.map((t) => (<tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{t.last_name} {t.first_name}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400 dark:text-slate-400">{t.email || '—'}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400 dark:text-slate-400">{t.phone || '—'}</td><td className="px-4 py-3 text-right"><div className="inline-flex gap-1"><button onClick={() => { setEditing(t); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(t.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></td></tr>))}</tbody></table>
+    <div>
+      <PageHeader title="Enseignants" subtitle="Liste des enseignants de l'établissement" />
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher un enseignant..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-      )}
-      {showForm && <TeacherForm schoolId={school!.id} teacher={editing} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
-}
+      </Card>
 
-function TeacherForm({ schoolId, teacher, onClose, onSaved }: { schoolId: string; teacher: Teacher | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ first_name: teacher?.first_name || '', last_name: teacher?.last_name || '', email: teacher?.email || '', phone: teacher?.phone || '' });
-  const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const payload = { school_id: schoolId, role: 'teacher', ...form };
-    const { error } = teacher ? await supabase.from('profiles').update(payload).eq('id', teacher.id) : await supabase.from('profiles').insert(payload);
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
-  return (
-    <Modal title={teacher ? 'Modifier' : 'Nouvel enseignant'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Prénom</label><input required value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nom</label><input required value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={inputCls} /></div></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Téléphone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} /></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={Users} message="Aucun enseignant trouvé" />
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Nom</th>
+                <th className="px-4 py-3 font-semibold">Prénom</th>
+                <th className="px-4 py-3 font-semibold">Téléphone</th>
+                <th className="px-4 py-3 font-semibold">Classes assignées</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{t.last_name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.first_name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                    {t.phone ? (
+                      <span className="inline-flex items-center gap-1"><Phone size={14} /> {t.phone}</span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                      {classCounts[t.id] || 0} classe(s)
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
   );
 }

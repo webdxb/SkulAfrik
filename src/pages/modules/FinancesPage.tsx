@@ -1,77 +1,220 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls, StatCard } from '../../components/ui';
+import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { Plus, Search, Pencil, Trash2, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 
-interface Fee { id: string; name: string; amount: number; fee_type: string; due_date: string }
-interface Payment { id: string; amount: number; payment_date: string; student_id: string }
-
-export function FinancesPage() {
-  const { school } = useAuth();
-  const [fees, setFees] = useState<Fee[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!school) return;
-    setLoading(true);
-    const [f, p] = await Promise.all([
-      supabase.from('fees').select('*').eq('school_id', school.id).order('due_date'),
-      supabase.from('payments').select('*, students!inner(first_name, last_name)').eq('school_id', school.id).order('payment_date', { ascending: false }).limit(20),
-    ]);
-    setFees((f.data || []) as Fee[]);
-    setPayments((p.data || []) as Payment[]);
-    setLoading(false);
-  }, [school]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const totalExpected = fees.reduce((sum, f) => sum + Number(f.amount), 0);
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title="Finances" subtitle="Frais de scolarité et paiements" action={<button onClick={() => setShowForm(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Nouvelle facture</button>} />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total collecté" value={totalCollected.toLocaleString()} color="border-l-emerald-500" />
-        <StatCard label="Total attendu" value={totalExpected.toLocaleString()} color="border-l-indigo-500" />
-        <StatCard label="Solde" value={(totalExpected - totalCollected).toLocaleString()} color="border-l-amber-500" />
-      </div>
-      {loading ? <div className="p-8 text-center text-sm text-slate-400 dark:text-slate-500">Chargement...</div> : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><h3 className="font-semibold text-slate-700">Frais</h3></div>
-            {fees.length === 0 ? <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">Aucun frais</div> : <table className="w-full text-sm"><tbody className="divide-y divide-slate-50 dark:divide-slate-800">{fees.map((f) => (<tr key={f.id}><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{f.name}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400">{f.fee_type}</td><td className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">{Number(f.amount).toLocaleString()}</td></tr>))}</tbody></table>}
-          </div>
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><h3 className="font-semibold text-slate-700">Paiements récents</h3></div>
-            {payments.length === 0 ? <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500">Aucun paiement</div> : <table className="w-full text-sm"><tbody className="divide-y divide-slate-50 dark:divide-slate-800">{payments.map((p) => (<tr key={p.id}><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{(p as any).students?.last_name} {(p as any).students?.first_name}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.payment_date}</td><td className="px-4 py-3 text-right font-semibold text-emerald-600">+{Number(p.amount).toLocaleString()}</td></tr>))}</tbody></table>}
-          </div>
-        </div>
-      )}
-      {showForm && <FeeForm schoolId={school!.id} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
+interface Transaction {
+  id: string;
+  type: string;
+  category: string;
+  description: string | null;
+  amount: number;
+  date: string;
 }
 
-function FeeForm({ schoolId, onClose, onSaved }: { schoolId: string; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ name: '', amount: 0, fee_type: 'tuition', due_date: '' });
+const emptyForm = { type: 'income', category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] };
+
+export function FinancesPage() {
+  const { school, profile } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const { error } = await supabase.from('fees').insert({ school_id: schoolId, ...form, amount: Number(form.amount) });
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
+
+  useEffect(() => {
+    if (school) loadData();
+  }, [school]);
+
+  async function loadData() {
+    if (!school) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('accounting_entries')
+      .select('id, type, category, description, amount, date')
+      .eq('school_id', school.id)
+      .order('date', { ascending: false });
+    setTransactions((data || []) as Transaction[]);
+    setLoading(false);
+  }
+
+  const filtered = transactions.filter((t) => {
+    const q = search.toLowerCase();
+    return (t.category || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || t.type.toLowerCase().includes(q);
+  });
+
+  const totalIncome = transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+  const balance = totalIncome - totalExpense;
+
+  function openAdd() {
+    setEditId(null);
+    setForm({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+    setModalOpen(true);
+  }
+
+  function openEdit(t: Transaction) {
+    setEditId(t.id);
+    setForm({ type: t.type, category: t.category, description: t.description || '', amount: String(t.amount), date: t.date || '' });
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!school || !profile) return;
+    setSaving(true);
+    const payload = {
+      school_id: school.id,
+      type: form.type,
+      category: form.category,
+      description: form.description || null,
+      amount: parseFloat(form.amount) || 0,
+      date: form.date,
+      created_by: profile.id,
+    };
+    if (editId) {
+      await supabase.from('accounting_entries').update(payload).eq('id', editId);
+    } else {
+      await supabase.from('accounting_entries').insert(payload);
+    }
+    setSaving(false);
+    setModalOpen(false);
+    loadData();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cette transaction ?')) return;
+    await supabase.from('accounting_entries').delete().eq('id', id);
+    loadData();
+  }
+
   return (
-    <Modal title="Nouvelle facture" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Désignation</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} /></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Type</label><select value={form.fee_type} onChange={(e) => setForm({ ...form, fee_type: e.target.value })} className={inputCls}><option value="tuition">Scolarité</option><option value="registration">Inscription</option><option value="exam">Examen</option><option value="other">Autre</option></select></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Montant</label><input type="number" required value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} className={inputCls} /></div></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Échéance</label><input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className={inputCls} /></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+    <div>
+      <PageHeader title="Finances" subtitle="Gérez les revenus et dépenses" action={
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Ajouter
+        </button>
+      } />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Revenus totaux</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalIncome.toLocaleString()} FCFA</p>
+            </div>
+            <div className="rounded-xl bg-emerald-100 dark:bg-emerald-900/30 p-3"><TrendingUp className="text-emerald-600 dark:text-emerald-400" size={24} /></div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Dépenses totales</p>
+              <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{totalExpense.toLocaleString()} FCFA</p>
+            </div>
+            <div className="rounded-xl bg-rose-100 dark:bg-rose-900/30 p-3"><TrendingDown className="text-rose-600 dark:text-rose-400" size={24} /></div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Solde</p>
+              <p className={`mt-1 text-2xl font-bold ${balance >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400'}`}>{balance.toLocaleString()} FCFA</p>
+            </div>
+            <div className="rounded-xl bg-indigo-100 dark:bg-indigo-900/30 p-3"><Wallet className="text-indigo-600 dark:text-indigo-400" size={24} /></div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher une transaction..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </Card>
+
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={Wallet} message="Aucune transaction trouvée" action={
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus size={16} /> Ajouter une transaction
+          </button>
+        } />
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="px-4 py-3 font-semibold">Type</th>
+                <th className="px-4 py-3 font-semibold">Catégorie</th>
+                <th className="px-4 py-3 font-semibold">Description</th>
+                <th className="px-4 py-3 font-semibold">Montant</th>
+                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.date}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                      {t.type === 'income' ? 'Revenu' : 'Dépense'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.category || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.description || '—'}</td>
+                  <td className={`px-4 py-3 font-medium ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {t.type === 'income' ? '+' : '-'}{Number(t.amount).toLocaleString()} FCFA
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex gap-2">
+                      <button onClick={() => openEdit(t)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {modalOpen && (
+        <Modal title={editId ? 'Modifier la transaction' : 'Ajouter une transaction'} onClose={() => setModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
+              <select className={inputCls} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                <option value="income">Revenu</option>
+                <option value="expense">Dépense</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Catégorie</label>
+              <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Ex: Frais de scolarité, Salaires..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+              <textarea className={inputCls} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Montant (FCFA)</label>
+              <input type="number" className={inputCls} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Date</label>
+              <input type="date" className={inputCls} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            </div>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

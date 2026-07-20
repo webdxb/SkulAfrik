@@ -1,61 +1,190 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, GraduationCap } from 'lucide-react';
-import { PageHeader, EmptyState, Modal, inputCls } from '../../components/ui';
+import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { Plus, Search, Pencil, Trash2, GraduationCap } from 'lucide-react';
 
-interface Alumnus { id: string; first_name: string; last_name: string; graduation_year: number; current_occupation: string; email: string; phone: string }
+interface Alumni {
+  id: string;
+  first_name: string;
+  last_name: string;
+  graduation_year: number;
+  current_occupation: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+const emptyForm = { first_name: '', last_name: '', graduation_year: '', current_occupation: '', email: '', phone: '' };
 
 export function AlumniPage() {
   const { school } = useAuth();
-  const [alumni, setAlumni] = useState<Alumnus[]>([]);
+  const [alumni, setAlumni] = useState<Alumni[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Alumnus | null>(null);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!school) return;
-    setLoading(true);
-    const { data } = await supabase.from('alumni').select('*').eq('school_id', school.id).order('graduation_year', { ascending: false });
-    setAlumni((data || []) as Alumnus[]);
-    setLoading(false);
+  useEffect(() => {
+    if (school) loadData();
   }, [school]);
 
-  useEffect(() => { load(); }, [load]);
-  const remove = async (id: string) => { if (confirm('Supprimer cet ancien élève ?')) { await supabase.from('alumni').delete().eq('id', id); load(); } };
+  async function loadData() {
+    if (!school) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('alumni')
+      .select('id, first_name, last_name, graduation_year, current_occupation, email, phone')
+      .eq('school_id', school.id)
+      .order('graduation_year', { ascending: false });
+    setAlumni((data || []) as Alumni[]);
+    setLoading(false);
+  }
+
+  const filtered = alumni.filter((a) => {
+    const q = search.toLowerCase();
+    return `${a.first_name} ${a.last_name}`.toLowerCase().includes(q) || String(a.graduation_year).includes(q);
+  });
+
+  function openAdd() {
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  }
+
+  function openEdit(a: Alumni) {
+    setEditId(a.id);
+    setForm({
+      first_name: a.first_name,
+      last_name: a.last_name,
+      graduation_year: String(a.graduation_year),
+      current_occupation: a.current_occupation || '',
+      email: a.email || '',
+      phone: a.phone || '',
+    });
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!school) return;
+    setSaving(true);
+    const payload = {
+      ...form,
+      school_id: school.id,
+      graduation_year: parseInt(form.graduation_year) || new Date().getFullYear(),
+      current_occupation: form.current_occupation || null,
+      email: form.email || null,
+      phone: form.phone || null,
+    };
+    if (editId) {
+      await supabase.from('alumni').update(payload).eq('id', editId);
+    } else {
+      await supabase.from('alumni').insert(payload);
+    }
+    setSaving(false);
+    setModalOpen(false);
+    loadData();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cet ancien élève ?')) return;
+    await supabase.from('alumni').delete().eq('id', id);
+    loadData();
+  }
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Anciens élèves" subtitle={`${alumni.length} ancien(s)`} action={<button onClick={() => { setEditing(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Plus size={16} /> Ajouter</button>} />
-      {loading ? <div className="p-8 text-center text-sm text-slate-400">Chargement...</div> : alumni.length === 0 ? <EmptyState icon={GraduationCap} message="Aucun ancien élève enregistré." /> : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50"><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Nom</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Promotion</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Occupation</th><th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Contact</th><th className="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Actions</th></tr></thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">{alumni.map((a) => (<tr key={a.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{a.last_name} {a.first_name}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400">{a.graduation_year}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400">{a.current_occupation || '—'}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-400">{a.email || a.phone || '—'}</td><td className="px-4 py-3 text-right"><div className="inline-flex gap-1"><button onClick={() => { setEditing(a); setShowForm(true); }} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 dark:text-slate-400"><Pencil size={15} /></button><button onClick={() => remove(a.id)} className="p-1.5 rounded hover:bg-rose-50 text-rose-500"><Trash2 size={15} /></button></div></td></tr>))}</tbody></table>
+    <div>
+      <PageHeader title="Anciens élèves" subtitle="Réseau des anciens élèves de l'établissement" action={
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Plus size={16} /> Ajouter
+        </button>
+      } />
+
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-10`} placeholder="Rechercher un ancien élève..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-      )}
-      {showForm && <AlumnusForm schoolId={school!.id} alumnus={editing} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
-    </div>
-  );
-}
+      </Card>
 
-function AlumnusForm({ schoolId, alumnus, onClose, onSaved }: { schoolId: string; alumnus: Alumnus | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ first_name: alumnus?.first_name || '', last_name: alumnus?.last_name || '', graduation_year: alumnus?.graduation_year || new Date().getFullYear(), current_occupation: alumnus?.current_occupation || '', email: alumnus?.email || '', phone: alumnus?.phone || '' });
-  const [saving, setSaving] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    const payload = { school_id: schoolId, ...form, graduation_year: Number(form.graduation_year) };
-    const { error } = alumnus ? await supabase.from('alumni').update(payload).eq('id', alumnus.id) : await supabase.from('alumni').insert(payload);
-    setSaving(false); if (error) { alert(error.message); return; } onSaved();
-  };
-  return (
-    <Modal title={alumnus ? 'Modifier' : 'Nouvel ancien'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Prénom</label><input required value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nom</label><input required value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={inputCls} /></div></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Année de promotion</label><input type="number" required value={form.graduation_year} onChange={(e) => setForm({ ...form, graduation_year: Number(e.target.value) })} className={inputCls} /></div>
-        <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Occupation actuelle</label><input value={form.current_occupation} onChange={(e) => setForm({ ...form, current_occupation: e.target.value })} className={inputCls} /></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} /></div><div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Téléphone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} /></div></div>
-        <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button><button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60">{saving ? '...' : 'Enregistrer'}</button></div>
-      </form>
-    </Modal>
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={GraduationCap} message="Aucun ancien élève trouvé" action={
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Plus size={16} /> Ajouter
+          </button>
+        } />
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Nom</th>
+                <th className="px-4 py-3 font-semibold">Prénom</th>
+                <th className="px-4 py-3 font-semibold">Année de diplomation</th>
+                <th className="px-4 py-3 font-semibold">Occupation actuelle</th>
+                <th className="px-4 py-3 font-semibold">Email</th>
+                <th className="px-4 py-3 font-semibold">Téléphone</th>
+                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{a.last_name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{a.first_name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{a.graduation_year}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{a.current_occupation || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{a.email || '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{a.phone || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex gap-2">
+                      <button onClick={() => openEdit(a)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(a.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {modalOpen && (
+        <Modal title={editId ? 'Modifier l\'ancien élève' : 'Ajouter un ancien élève'} onClose={() => setModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Prénom</label>
+              <input className={inputCls} value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nom</label>
+              <input className={inputCls} value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Année de diplomation</label>
+              <input type="number" className={inputCls} value={form.graduation_year} onChange={(e) => setForm({ ...form, graduation_year: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Occupation actuelle</label>
+              <input className={inputCls} value={form.current_occupation} onChange={(e) => setForm({ ...form, current_occupation: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+              <input type="email" className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Téléphone</label>
+              <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </div>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
