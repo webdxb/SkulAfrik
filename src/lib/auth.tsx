@@ -70,6 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (u: any) => {
     if (!u) { setProfile(null); setSchool(null); setIsSuperAdmin(false); setSubscriptionActive(true); setPlanModules(null); return; }
+    // Check super admin first — before any school/subscription logic
+    const { data: sa } = await supabase.from('super_admin_emails').select('email').eq('email', u.email).maybeSingle();
+    const superAdmin = !!sa;
+    setIsSuperAdmin(superAdmin);
+    // Super admins have full access, no restrictions
+    if (superAdmin) {
+      setProfile({ id: u.id, email: u.email, first_name: null, last_name: null, role: 'super_admin', school_id: null, phone: null });
+      setSchool(null);
+      setSubscriptionActive(true);
+      setPlanModules(null);
+      return;
+    }
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
     const normalizedProf = prof ? { ...prof, role: normalizeRole(prof.role), email: u.email } : null;
     setProfile(normalizedProf as Profile | null);
@@ -87,8 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setSchool(null);
     }
-    const { data: sa } = await supabase.from('super_admin_emails').select('email').eq('email', u.email).maybeSingle();
-    setIsSuperAdmin(!!sa);
   };
 
   useEffect(() => {
