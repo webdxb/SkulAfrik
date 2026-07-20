@@ -17,3 +17,10 @@ export function validateMinLength(value: string, min: number, label: string): st
 export function hasErrors<T>(errors: FieldErrors<T>): boolean {
   return Object.values(errors).some((v) => v !== undefined && v !== null && v !== '');
 }
+
+export function validatePhone(phone: string): string | null {
+  if (!phone.trim()) return null; // optional
+  const cleaned = phone.replace(/[\s\-().]/g, '');
+  const re = /^\+\d{6,15}$/;
+  return re.test(cleaned) ? null : 'Numéro de téléphone invalide (format: +237XXXXXXXXX)';
+}

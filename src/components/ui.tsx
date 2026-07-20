@@ -42,3 +42,25 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`bg-white rounded-xl border border-slate-100 shadow-sm ${className}`}>{children}</div>;
 }
+
+export function StatCard({ label, value, color, icon: Icon }: { label: string; value: string | number; color: string; icon?: any }) {
+  return (
+    <div className={`bg-white rounded-xl border-l-4 ${color} border-y border-r border-slate-100 p-5 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div><p className="text-sm text-slate-500">{label}</p><p className="mt-1 font-heading text-2xl font-bold text-slate-900">{value}</p></div>
+        {Icon && <div className="h-11 w-11 rounded-lg bg-slate-50 flex items-center justify-center"><Icon className="text-slate-600" size={22} /></div>}
+      </div>
+    </div>
+  );
+}
+
+export function EmptyState({ icon: Icon, title, message, action }: { icon?: any; title?: string; message?: string; action?: ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
+      {Icon && <Icon size={32} className="mx-auto text-slate-300" />}
+      {title && <p className="mt-3 text-sm font-medium text-slate-600">{title}</p>}
+      {message && <p className="mt-1 text-sm text-slate-400">{message}</p>}
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}

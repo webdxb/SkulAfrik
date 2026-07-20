@@ -6,8 +6,27 @@ import { TeacherDashboard } from './dashboards/TeacherDashboard';
 import { ParentDashboard } from './dashboards/ParentDashboard';
 import { StudentDashboard } from './dashboards/StudentDashboard';
 import { PaywallPage } from './Paywall';
-import { Logo } from '../components/Logo';
-import { Check, Lock } from 'lucide-react';
+import { StudentsPage } from './modules/StudentsPage';
+import { ParentsPage } from './modules/ParentsPage';
+import { TeachersPage } from './modules/TeachersPage';
+import { StaffPage } from './modules/StaffPage';
+import { ClassesPage } from './modules/ClassesPage';
+import { SubjectsPage } from './modules/SubjectsPage';
+import { AttendancePage } from './modules/AttendancePage';
+import { GradesPage } from './modules/GradesPage';
+import { ExamsPage } from './modules/ExamsPage';
+import { BulletinsPage } from './modules/BulletinsPage';
+import { CalendarPage } from './modules/CalendarPage';
+import { TransportPage } from './modules/TransportPage';
+import { LibraryPage } from './modules/LibraryPage';
+import { AlumniPage } from './modules/AlumniPage';
+import { FinancesPage } from './modules/FinancesPage';
+import { AccountingPage } from './modules/AccountingPage';
+import { PayrollPage } from './modules/PayrollPage';
+import { ReportsPage } from './modules/ReportsPage';
+import { MessagesPage } from './modules/MessagesPage';
+import { SupportPage } from './modules/SupportPage';
+import { SettingsPage } from './modules/SettingsPage';
 
 export function Dashboard({ paywall = false }: { paywall?: boolean }) {
   const { profile, subscriptionActive, planModules } = useAuth();
@@ -46,6 +65,17 @@ export function Dashboard({ paywall = false }: { paywall?: boolean }) {
   const renderPage = () => {
     if (cleanPath === '/dashboard' || cleanPath === '/dashboard/') return renderHome();
     if (cleanPath === '/pricing') return <PaywallPage />;
+    const pages: Record<string, React.FC> = {
+      '/dashboard/students': StudentsPage, '/dashboard/parents': ParentsPage, '/dashboard/teachers': TeachersPage,
+      '/dashboard/staff': StaffPage, '/dashboard/classes': ClassesPage, '/dashboard/subjects': SubjectsPage,
+      '/dashboard/attendance': AttendancePage, '/dashboard/grades': GradesPage, '/dashboard/exams': ExamsPage,
+      '/dashboard/bulletins': BulletinsPage, '/dashboard/calendar': CalendarPage, '/dashboard/transport': TransportPage,
+      '/dashboard/library': LibraryPage, '/dashboard/alumni': AlumniPage, '/dashboard/finances': FinancesPage,
+      '/dashboard/accounting': AccountingPage, '/dashboard/payroll': PayrollPage, '/dashboard/reports': ReportsPage,
+      '/dashboard/messages': MessagesPage, '/dashboard/support': SupportPage, '/dashboard/settings': SettingsPage,
+    };
+    const Page = pages[cleanPath];
+    if (Page) return <Page />;
     return <ModulePlaceholder path={cleanPath} />;
   };
 

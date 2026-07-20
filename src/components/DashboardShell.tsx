@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { Link, useRoute } from '../lib/router';
-import { LogOut, Menu, Users, BookOpen, Calendar, Wallet, BarChart3, Mail, LifeBuoy, Settings, Bus, Library, FileText, ClipboardList, Calculator, Lock, Home } from 'lucide-react';
+import { LogOut, Menu, Users, BookOpen, Calendar, Wallet, BarChart3, Mail, LifeBuoy, Settings, Bus, Library, FileText, ClipboardList, Calculator, Lock, Home, Shield } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface NavItem { to: string; label: string; icon: any; group?: string; roles?: string[]; module?: string }
@@ -32,7 +32,7 @@ const NAV: NavItem[] = [
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
-  const { school, profile, signOut, subscriptionActive, planModules } = useAuth();
+  const { school, profile, signOut, subscriptionActive, planModules, isSuperAdmin } = useAuth();
   const path = useRoute();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -50,7 +50,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-slate-50 flex">
       <aside className={`fixed lg:sticky top-0 z-40 h-screen w-64 bg-white border-r border-slate-100 flex-shrink-0 transition-transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-16 flex items-center px-5 border-b border-slate-100">
-          <Link to="/dashboard"><Logo size={32} /></Link>
+          <Link to="/dashboard"><Logo height={32} /></Link>
         </div>
         <nav className="h-[calc(100vh-4rem)] overflow-y-auto py-4 px-3 space-y-4">
           {groups.map((group) => (
@@ -71,6 +71,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </div>
             </div>
           ))}
+          {/* Super Admin link — visible ONLY for super_admin role */}
+          {isSuperAdmin && (
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <p className="px-3 mb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">Administration</p>
+              <Link to="/super-admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                <Shield size={16} className="text-slate-400" />
+                Dashboard Super Admin
+              </Link>
+            </div>
+          )}
         </nav>
       </aside>
 
