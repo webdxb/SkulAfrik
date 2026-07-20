@@ -18,6 +18,7 @@ export function OnboardingPage() {
   const [form, setForm] = useState({
     name: '', legal_name: '', country: 'CM', region: '', city: '', currency: 'XAF',
     director_name: '', director_email: user?.email || '', address: '', phone: '',
+    sales_code: '',
   });
   const [errors, setErrors] = useState<FieldErrors<typeof form>>({});
   const [stepError, setStepError] = useState<string | null>(null);
@@ -52,13 +53,23 @@ export function OnboardingPage() {
 
   const finish = async () => {
     setLoading(true);
+
+    // Look up sales code if provided
+    let salesCodeId: string | null = null;
+    if (form.sales_code.trim()) {
+      const { data: sc } = await supabase.from('sales_codes').select('id').eq('code', form.sales_code.trim().toUpperCase()).eq('is_active', true).maybeSingle();
+      if (sc) salesCodeId = sc.id;
+    }
+
     const { data: school, error } = await supabase.from('schools').insert({
       name: form.name, legal_name: form.legal_name, type: estTypes[0] || 'secondary',
       country: form.country, region: form.region, city: form.city, currency: form.currency,
       director_name: form.director_name, director_email: form.director_email,
       address: form.address, phone: form.phone, owner_user_id: user.id,
       language: systeme, verification_status: 'pending', subscription_status: 'trial',
-      trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+      trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      trial_started_at: new Date().toISOString(),
+      sales_code_id: salesCodeId,
     }).select().single();
     if (error) { setLoading(false); setStepError(error.message); return; }
 
@@ -158,14 +169,18 @@ export function OnboardingPage() {
           )}
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-slate-900">Devise</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Devise & Code commercial</h2>
               <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Devise</label>
                 <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className={inputCls}>
                   <option value="XAF">FCFA (XAF)</option><option value="XOF">FCFA (XOF)</option><option value="NGN">Naira</option><option value="USD">USD</option>
                 </select>
               </div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Code commercial (optionnel)</label>
+                <input value={form.sales_code} onChange={(e) => setForm({ ...form, sales_code: e.target.value })} className={inputCls} placeholder="Ex: AFRIK2026" />
+                <p className="mt-1 text-xs text-slate-400">Si un commercial vous a donné un code, saisissez-le ici pour l'associer à votre inscription.</p>
+              </div>
               <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 text-sm text-indigo-700">
-                Un essai gratuit de 14 jours est activé automatiquement. Aucune carte requise.
+                Un essai gratuit de 7 jours est activé automatiquement. Aucune carte requise.
               </div>
             </div>
           )}

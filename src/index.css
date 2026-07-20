@@ -16,3 +16,21 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Baloo 2', system-ui, sans-serif;
 }
+
+/* Dark mode base */
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Smooth theme transition */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
