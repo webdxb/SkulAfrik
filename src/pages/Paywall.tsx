@@ -20,7 +20,7 @@ export function PaywallPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const trialEnded = school ? new Date(school.trial_ends_at) <= new Date() : false;
+  const trialEnded = school?.trial_ends_at ? new Date(school.trial_ends_at) <= new Date() : false;
 
   const choosePlan = async (slug: string) => {
     setSelectedPlan(slug);
