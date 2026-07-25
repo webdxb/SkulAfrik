@@ -1,0 +1,35 @@
+diff --git a/src/components/ui.tsx b/src/components/ui.tsx
+index 078f753..97246d9 100644
+--- a/src/components/ui.tsx
++++ b/src/components/ui.tsx
+@@ -2,6 +2,17 @@ import { ReactNode } from 'react';
+ 
+ export const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none';
+ 
++export function inputErrorCls(hasError?: boolean) {
++  return hasError
++    ? 'w-full rounded-lg border border-rose-400 dark:border-rose-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none'
++    : inputCls;
++}
++
++export function FieldError({ error }: { error?: string | null }) {
++  if (!error) return null;
++  return <p className="mt-1 text-xs text-rose-600">{error}</p>;
++}
++
+ export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+   return (
+     <div className="flex items-start justify-between mb-6">
+diff --git a/src/pages/Paywall.tsx b/src/pages/Paywall.tsx
+index 9dd5521..1966bc6 100644
+--- a/src/pages/Paywall.tsx
++++ b/src/pages/Paywall.tsx
+@@ -20,7 +20,7 @@ export function PaywallPage() {
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+ 
+-  const trialEnded = school ? new Date(school.trial_ends_at) <= new Date() : false;
++  const trialEnded = school?.trial_ends_at ? new Date(school.trial_ends_at) <= new Date() : false;
+ 
+   const choosePlan = async (slug: string) => {
+     setSelectedPlan(slug);
