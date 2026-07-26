@@ -7,6 +7,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { Dashboard } from './pages/Dashboard';
 import { SuperAdminApp } from './pages/SuperAdminApp';
 import { AccessDenied } from './pages/AccessDenied';
+import { ParentJoinPage } from './pages/ParentJoinPage';
 
 function Router() {
   const { user, profile, isSuperAdmin, subscriptionActive, loading } = useAuth();
@@ -32,6 +33,9 @@ function Router() {
     return <OnboardingPage />;
   }
   if (path === '/onboarding') return <OnboardingPage />;
+
+  // Logged-in user linking an additional child to their parent account
+  if (path === '/parent/rejoindre') return <ParentJoinPage />;
 
   // Block non-super-admins from /super-admin URLs
   if (path.startsWith('/super-admin')) return <AccessDenied />;

@@ -85,7 +85,7 @@ function OverviewSection() {
       const [s, u, sub] = await Promise.all([
         supabase.from('schools').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('subscriptions').select('id', { count: 'exact', head: true }),
+        supabase.from('schools').select('id', { count: 'exact', head: true }).eq('subscription_status', 'active'),
       ]);
       setStats({ schools: s.count || 0, users: u.count || 0, subscriptions: sub.count || 0, revenue: 0 });
     })();
@@ -206,7 +206,8 @@ function BillingSection() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('subscriptions').select('*, schools(name), plans(name, price_monthly)').order('created_at', { ascending: false });
+      // Subscriptions live directly on the schools row — there is no separate "subscriptions" table.
+      const { data } = await supabase.from('schools').select('id, name, subscription_status, plans(name, price_monthly)').order('created_at', { ascending: false });
       setSubs(data || []); setLoading(false);
     })();
   }, []);
@@ -226,9 +227,9 @@ function BillingSection() {
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {subs.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.schools?.name || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.plans?.name || '—'}</td>
-                  <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${s.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{s.status}</span></td>
+                  <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${s.subscription_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{s.subscription_status}</span></td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.plans?.price_monthly || 0} FCFA</td>
                 </tr>
               ))}

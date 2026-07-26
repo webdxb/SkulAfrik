@@ -72,7 +72,7 @@ export function TeacherDashboard() {
       const { data: classRows } = await supabase
         .from('classes')
         .select('id, name, level')
-        .eq('teacher_id', profile.id);
+        .eq('homeroom_teacher_id', profile.id);
       const teacherClasses = (classRows || []) as { id: string; name: string; level: string | null }[];
 
       // Student counts per class
@@ -80,7 +80,7 @@ export function TeacherDashboard() {
       let studentTotal = 0;
       for (const c of teacherClasses) {
         const { count } = await supabase
-          .from('eleve_classes')
+          .from('students')
           .select('id', { count: 'exact', head: true })
           .eq('class_id', c.id);
         classStats.push({ id: c.id, name: c.name, level: c.level, student_count: count || 0 });
@@ -114,18 +114,18 @@ export function TeacherDashboard() {
       // Recent grades entered by this teacher
       const { data: gradeRows } = await supabase
         .from('grades')
-        .select('id, value, created_at, subject:subjects(name), eleve:eleves(first_name, last_name)')
-        .eq('entered_by', profile.id)
+        .select('id, grade_value, created_at, subject:subjects(name), student:students(first_name, last_name)')
+        .eq('recorded_by', profile.id)
         .order('created_at', { ascending: false })
         .limit(6);
 
       if (cancelled) return;
       const grades = (gradeRows || []).map((r: any) => ({
         id: r.id,
-        value: r.value,
+        value: r.grade_value,
         created_at: r.created_at,
         subject_name: r.subject?.name || null,
-        student_name: r.eleve ? `${r.eleve.first_name || ''} ${r.eleve.last_name || ''}`.trim() || null : null,
+        student_name: r.student ? `${r.student.first_name || ''} ${r.student.last_name || ''}`.trim() || null : null,
       }));
       setRecentGrades(grades);
       setLoading(false);

@@ -60,7 +60,7 @@ export function StudentDashboard() {
 
       // Find the student record linked to this profile
       const { data: eleve } = await supabase
-        .from('eleves')
+        .from('students')
         .select('id, class_id')
         .eq('profile_id', profile.id)
         .maybeSingle();
@@ -85,44 +85,38 @@ export function StudentDashboard() {
       // Grades
       const { data: grades } = await supabase
         .from('grades')
-        .select('id, value, created_at, coefficient, subject:subjects(name)')
-        .eq('eleve_id', eleve.id)
+        .select('id, grade_value, max_value, created_at, subject:subjects(name)')
+        .eq('student_id', eleve.id)
         .order('created_at', { ascending: false })
         .limit(6);
 
       if (cancelled) return;
       const gradeRows = (grades || []).map((r: any) => ({
         id: r.id,
-        value: r.value,
+        value: r.grade_value,
         created_at: r.created_at,
         subject_name: r.subject?.name || null,
-        coefficient: r.coefficient,
+        coefficient: r.max_value || 20,
       }));
       setRecentGrades(gradeRows);
 
-      // Weighted average
+      // Average, normalized to /20 (grades can have different max_value scales)
       const allGrades = (grades || []) as any[];
       if (allGrades.length > 0) {
-        let totalWeighted = 0;
-        let totalCoeff = 0;
-        for (const g of allGrades) {
-          const coeff = g.coefficient || 1;
-          totalWeighted += (g.value || 0) * coeff;
-          totalCoeff += coeff;
-        }
-        setAverageGrade(totalCoeff > 0 ? totalWeighted / totalCoeff : null);
+        const normalized = allGrades.map((g) => ((g.grade_value || 0) / (g.max_value || 20)) * 20);
+        setAverageGrade(normalized.reduce((a, b) => a + b, 0) / normalized.length);
       }
 
       // Attendance rate
       const { count: presentCount } = await supabase
         .from('attendance')
         .select('id', { count: 'exact', head: true })
-        .eq('eleve_id', eleve.id)
+        .eq('student_id', eleve.id)
         .eq('status', 'present');
       const { count: totalCount } = await supabase
         .from('attendance')
         .select('id', { count: 'exact', head: true })
-        .eq('eleve_id', eleve.id);
+        .eq('student_id', eleve.id);
 
       if (cancelled) return;
       if (totalCount && totalCount > 0) {
@@ -132,18 +126,19 @@ export function StudentDashboard() {
       // Upcoming events
       const nowIso = new Date().toISOString();
       const { data: events } = await supabase
-        .from('events')
-        .select('id, title, start_date, type')
-        .gte('start_date', nowIso)
-        .order('start_date', { ascending: true })
+        .from('calendar_events')
+        .select('id, title, start_at, event_type')
+        .eq('school_id', school?.id)
+        .gte('start_at', nowIso)
+        .order('start_at', { ascending: true })
         .limit(5);
 
       if (cancelled) return;
-      setUpcomingEvents((events || []) as EventRow[]);
+      setUpcomingEvents((events || []).map((e: any) => ({ id: e.id, title: e.title, start_date: e.start_at, type: e.event_type })));
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [profile?.id]);
+  }, [profile?.id, school?.id]);
 
   if (!profile) {
     return <EmptyState icon={GraduationCap} message="Profil introuvable. Veuillez vous reconnecter." />;
@@ -226,7 +221,7 @@ export function StudentDashboard() {
                         {g.subject_name || 'Matière'}
                       </p>
                       <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Coeff. {g.coefficient || 1}
+                        Sur {g.coefficient || 20}
                       </p>
                     </div>
                   </li>
