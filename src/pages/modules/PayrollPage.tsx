@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, CreditCard } from 'lucide-react';
 
@@ -28,6 +29,7 @@ interface PayrollItem {
 const emptyForm = { staff_id: '', month: new Date().toISOString().slice(0, 7), base_salary: '', bonuses: '', deductions: '', status: 'pending' };
 
 export function PayrollPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [items, setItems] = useState<PayrollItem[]>([]);
@@ -133,9 +135,11 @@ export function PayrollPage() {
         status: form.status,
       };
       if (editId) {
-        await supabase.from('payroll_items').update(payload).eq('id', editId);
+        const { error } = await supabase.from('payroll_items').update(payload).eq('id', editId);
+        if (error) { showError(error.message); return; }
       } else {
-        await supabase.from('payroll_items').insert(payload);
+        const { error } = await supabase.from('payroll_items').insert(payload);
+        if (error) { showError(error.message); return; }
       }
     }
 
@@ -146,7 +150,8 @@ export function PayrollPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette ligne de paie ?')) return;
-    await supabase.from('payroll_items').delete().eq('id', id);
+    const { error } = await supabase.from('payroll_items').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, Bus } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface TransportRoute {
 const emptyForm = { name: '', driver_name: '', driver_phone: '', vehicle_plate: '', capacity: '' };
 
 export function TransportPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [routes, setRoutes] = useState<TransportRoute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,9 +73,11 @@ export function TransportPage() {
       price_annual: 0,
     };
     if (editId) {
-      await supabase.from('transport_routes').update(payload).eq('id', editId);
+      const { error } = await supabase.from('transport_routes').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('transport_routes').insert(payload);
+      const { error } = await supabase.from('transport_routes').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -82,7 +86,8 @@ export function TransportPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette route ?')) return;
-    await supabase.from('transport_routes').delete().eq('id', id);
+    const { error } = await supabase.from('transport_routes').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

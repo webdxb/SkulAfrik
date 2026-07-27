@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface CalendarEvent {
 const emptyForm = { title: '', description: '', event_type: 'event', start_time: '', end_time: '' };
 
 export function CalendarPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,9 +81,11 @@ export function CalendarPage() {
       created_by: profile.id,
     };
     if (editId) {
-      await supabase.from('calendar_events').update(payload).eq('id', editId);
+      const { error } = await supabase.from('calendar_events').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('calendar_events').insert(payload);
+      const { error } = await supabase.from('calendar_events').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -90,7 +94,8 @@ export function CalendarPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cet événement ?')) return;
-    await supabase.from('calendar_events').delete().eq('id', id);
+    const { error } = await supabase.from('calendar_events').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

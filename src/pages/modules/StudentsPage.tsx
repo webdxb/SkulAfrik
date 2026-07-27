@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, GraduationCap, Users } from 'lucide-react';
 
@@ -23,6 +24,7 @@ interface ClassItem {
 const emptyForm = { first_name: '', last_name: '', gender: '', date_of_birth: '', class_id: '' };
 
 export function StudentsPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -85,9 +87,11 @@ export function StudentsPage() {
       gender: form.gender || null,
     };
     if (editId) {
-      await supabase.from('students').update(payload).eq('id', editId);
+      const { error } = await supabase.from('students').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('students').insert(payload);
+      const { error } = await supabase.from('students').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -96,7 +100,8 @@ export function StudentsPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cet élève ?')) return;
-    await supabase.from('students').delete().eq('id', id);
+    const { error } = await supabase.from('students').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

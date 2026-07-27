@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, inputCls, Card } from '../../components/ui';
 import { Settings, Plus, Trash2, Shield, Check, X, CreditCard } from 'lucide-react';
 
@@ -36,6 +37,7 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 export function SettingsPage() {
+  const { showError } = useToast();
   const { school, profile, refresh } = useAuth();
   const [schoolForm, setSchoolForm] = useState({ name: '', country: '', city: '', phone: '', email: '', address: '' });
   const [savingSchool, setSavingSchool] = useState(false);
@@ -82,7 +84,7 @@ export function SettingsPage() {
   async function handleSaveSchool() {
     if (!school) return;
     setSavingSchool(true);
-    await supabase.from('schools').update({
+    const { error } = await supabase.from('schools').update({
       name: schoolForm.name,
       country: schoolForm.country || null,
       city: schoolForm.city || null,
@@ -91,6 +93,7 @@ export function SettingsPage() {
       address: schoolForm.address || null,
     }).eq('id', school.id);
     setSavingSchool(false);
+    if (error) { showError(error.message); return; }
     setSchoolSaved(true);
     setTimeout(() => setSchoolSaved(false), 3000);
     refresh();
@@ -99,13 +102,14 @@ export function SettingsPage() {
   async function handleCreateRole() {
     if (!newRole.name || !school) return;
     setSavingRole(true);
-    const { data } = await supabase.from('custom_roles').insert({
+    const { data, error } = await supabase.from('custom_roles').insert({
       school_id: school.id,
       name: newRole.name,
       description: newRole.description || null,
       is_system: false,
       is_active: true,
     }).select('id').single();
+    if (error) { showError(error.message); setSavingRole(false); return; }
     if (data?.id) {
       setSelectedRoleId(data.id);
       setNewRole({ name: '', description: '' });
@@ -117,8 +121,10 @@ export function SettingsPage() {
 
   async function handleDeleteRole(id: string) {
     if (!confirm('Supprimer ce rôle ?')) return;
-    await supabase.from('custom_role_permissions').delete().eq('role_id', id);
-    await supabase.from('custom_roles').delete().eq('id', id);
+    const { error: permErr } = await supabase.from('custom_role_permissions').delete().eq('role_id', id);
+    if (permErr) { showError(permErr.message); return; }
+    const { error } = await supabase.from('custom_roles').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     if (selectedRoleId === id) setSelectedRoleId(null);
     loadRoles();
   }
@@ -127,16 +133,18 @@ export function SettingsPage() {
     const existing = permissions.find((p) => p.role_id === roleId && p.module === module);
     if (existing) {
       const newValue = !existing[field];
-      await supabase.from('custom_role_permissions').update({ [field]: newValue }).eq('id', existing.id);
+      const { error } = await supabase.from('custom_role_permissions').update({ [field]: newValue }).eq('id', existing.id);
+      if (error) { showError(error.message); return; }
       setPermissions(permissions.map((p) => p.id === existing.id ? { ...p, [field]: newValue } : p));
     } else {
-      const { data } = await supabase.from('custom_role_permissions').insert({
+      const { data, error } = await supabase.from('custom_role_permissions').insert({
         role_id: roleId,
         module,
         can_read: field === 'can_read',
         can_write: field === 'can_write',
         can_delete: field === 'can_delete',
       }).select('id').single();
+      if (error) { showError(error.message); return; }
       if (data) {
         setPermissions([...permissions, { id: data.id, role_id: roleId, module, can_read: field === 'can_read', can_write: field === 'can_write', can_delete: field === 'can_delete' }]);
       }

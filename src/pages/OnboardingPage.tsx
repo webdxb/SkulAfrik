@@ -51,7 +51,8 @@ export function OnboardingPage() {
       if (schErr) throw schErr;
 
       // Update profile
-      await supabase.from('profiles').update({ role: 'admin', school_id: school.id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      const { error: profErr } = await supabase.from('profiles').update({ role: 'admin', school_id: school.id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      if (profErr) throw profErr;
       await refresh();
       navigate('/dashboard');
     } catch (e: any) { setError(e.message); }
@@ -65,7 +66,8 @@ export function OnboardingPage() {
       const { data: result, error: rpcErr } = await supabase.rpc('complete_inscription_link', { p_code: linkCode.trim(), p_role: 'parent' });
       if (rpcErr) throw rpcErr;
 
-      await supabase.from('profiles').update({ role: 'parent', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      const { error: profErr } = await supabase.from('profiles').update({ role: 'parent', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      if (profErr) throw profErr;
       await refresh();
       navigate('/dashboard');
     } catch (e: any) { setError(e.message); }
@@ -79,7 +81,8 @@ export function OnboardingPage() {
       const { data: result, error: rpcErr } = await supabase.rpc('complete_inscription_link', { p_code: linkCode.trim(), p_role: 'student' });
       if (rpcErr) throw rpcErr;
 
-      await supabase.from('profiles').update({ role: 'student', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      const { error: profErr } = await supabase.from('profiles').update({ role: 'student', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      if (profErr) throw profErr;
       await refresh();
       navigate('/dashboard');
     } catch (e: any) { setError(e.message); }

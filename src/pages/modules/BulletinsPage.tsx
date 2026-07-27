@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { FileText, Send, Search, Award } from 'lucide-react';
 
@@ -17,6 +18,7 @@ interface Student { id: string; first_name: string; last_name: string; }
 
 export function BulletinsPage() {
   const { school } = useAuth();
+  const { showError } = useToast();
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [students, setStudents] = useState<Record<string, Student>>({});
   const [loading, setLoading] = useState(true);
@@ -68,14 +70,16 @@ export function BulletinsPage() {
         status: 'draft',
         generated_at: new Date().toISOString(),
       }));
-      await supabase.from('bulletins').insert(records);
+      const { error } = await supabase.from('bulletins').insert(records);
+      if (error) { showError(error.message); return; }
     }
     setGenerating(false);
     loadData();
   }
 
   async function handlePublish(id: string) {
-    await supabase.from('bulletins').update({ status: 'published' }).eq('id', id);
+    const { error } = await supabase.from('bulletins').update({ status: 'published' }).eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

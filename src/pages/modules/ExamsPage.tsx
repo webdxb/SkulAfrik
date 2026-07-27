@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, FileText } from 'lucide-react';
 
@@ -20,6 +21,7 @@ interface Subject { id: string; name: string; }
 const emptyForm = { name: '', class_id: '', subject_id: '', exam_date: '', max_score: '20', term: 'T1' };
 
 export function ExamsPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -97,23 +99,27 @@ export function ExamsPage() {
     };
     let examId = editId;
     if (editId) {
-      await supabase.from('exams').update(payload).eq('id', editId);
+      const { error } = await supabase.from('exams').update(payload).eq('id', editId);
+      if (error) { showError(error.message); setSaving(false); return; }
     } else {
-      const { data } = await supabase.from('exams').insert(payload).select('id').single();
+      const { data, error } = await supabase.from('exams').insert(payload).select('id').single();
+      if (error) { showError(error.message); setSaving(false); return; }
       examId = data?.id;
     }
     // Link class + subject via exam_subjects
     if (examId && form.class_id && form.subject_id) {
       if (editId) {
-        await supabase.from('exam_subjects').delete().eq('exam_id', examId);
+        const { error } = await supabase.from('exam_subjects').delete().eq('exam_id', examId);
+        if (error) { showError(error.message); setSaving(false); return; }
       }
-      await supabase.from('exam_subjects').insert({
+      const { error } = await supabase.from('exam_subjects').insert({
         exam_id: examId,
         class_id: form.class_id,
         subject_id: form.subject_id,
         max_score: parseFloat(form.max_score) || 20,
         exam_date: form.exam_date || null,
       });
+      if (error) { showError(error.message); setSaving(false); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -122,8 +128,10 @@ export function ExamsPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cet examen ?')) return;
-    await supabase.from('exam_subjects').delete().eq('exam_id', id);
-    await supabase.from('exams').delete().eq('id', id);
+    const { error: esErr } = await supabase.from('exam_subjects').delete().eq('exam_id', id);
+    if (esErr) { showError(esErr.message); return; }
+    const { error } = await supabase.from('exams').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

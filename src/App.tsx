@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from './lib/auth';
 import { RouterProvider, useRoute } from './lib/router';
+import { ToastProvider } from './lib/toast';
 import { useEffect } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
@@ -52,7 +53,9 @@ export function App() {
   return (
     <RouterProvider>
       <AuthProvider>
-        <Router />
+        <ToastProvider>
+          <Router />
+        </ToastProvider>
       </AuthProvider>
     </RouterProvider>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { LifeBuoy, Plus, Send, Search } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface Ticket {
 }
 
 export function SupportPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export function SupportPage() {
   async function handleCreate() {
     if (!school || !profile) return;
     setSaving(true);
-    await supabase.from('support_tickets').insert({
+    const { error } = await supabase.from('support_tickets').insert({
       school_id: school.id,
       created_by: profile.id,
       subject: form.subject,
@@ -50,6 +52,7 @@ export function SupportPage() {
       status: 'open',
       priority: form.priority,
     });
+    if (error) { showError(error.message); setSaving(false); return; }
     setSaving(false);
     setForm({ subject: '', description: '', priority: 'medium' });
     setShowForm(false);

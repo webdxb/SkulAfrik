@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { Send, Plus, MessageSquare, Search } from 'lucide-react';
 
@@ -21,6 +22,7 @@ interface Profile {
 }
 
 export function MessagesPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [contacts, setContacts] = useState<Record<string, string>>({});
@@ -64,13 +66,14 @@ export function MessagesPage() {
   async function handleSend() {
     if (!school || !profile || !compose.recipient_id) return;
     setSending(true);
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       school_id: school.id,
       sender_id: profile.id,
       recipient_id: compose.recipient_id,
       subject: compose.subject || null,
       body: compose.body || null,
     });
+    if (error) { showError(error.message); setSending(false); return; }
     setSending(false);
     setCompose({ recipient_id: '', subject: '', body: '' });
     setShowCompose(false);

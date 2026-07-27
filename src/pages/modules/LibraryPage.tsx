@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, BookOpen } from 'lucide-react';
 
@@ -17,6 +18,7 @@ interface Book {
 const emptyForm = { title: '', author: '', isbn: '', category: '', copies_total: '', copies_available: '' };
 
 export function LibraryPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,9 +77,11 @@ export function LibraryPage() {
       copies_available: available,
     };
     if (editId) {
-      await supabase.from('library_books').update(payload).eq('id', editId);
+      const { error } = await supabase.from('library_books').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('library_books').insert(payload);
+      const { error } = await supabase.from('library_books').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -86,7 +90,8 @@ export function LibraryPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer ce livre ?')) return;
-    await supabase.from('library_books').delete().eq('id', id);
+    const { error } = await supabase.from('library_books').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

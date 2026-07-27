@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { CheckCircle2, XCircle, Clock, Save, ClipboardCheck } from 'lucide-react';
 
@@ -11,6 +12,7 @@ type Status = 'present' | 'absent' | 'late';
 
 export function AttendancePage() {
   const { school, profile } = useAuth();
+  const { showError } = useToast();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -79,9 +81,11 @@ export function AttendancePage() {
     }));
 
     // Delete existing then insert
-    await supabase.from('attendance').delete().eq('school_id', school.id).eq('class_id', selectedClass).eq('date', selectedDate);
+    const { error: delErr } = await supabase.from('attendance').delete().eq('school_id', school.id).eq('class_id', selectedClass).eq('date', selectedDate);
+    if (delErr) { showError(delErr.message); setSaving(false); return; }
     if (records.length > 0) {
-      await supabase.from('attendance').insert(records);
+      const { error: insErr } = await supabase.from('attendance').insert(records);
+      if (insErr) { showError(insErr.message); setSaving(false); return; }
     }
     setSaving(false);
     setSaved(true);

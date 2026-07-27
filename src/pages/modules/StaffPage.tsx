@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, Briefcase } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface Staff {
 const emptyForm = { first_name: '', last_name: '', role: '', phone: '', salary_base: '' };
 
 export function StaffPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,9 +71,11 @@ export function StaffPage() {
       status: 'active',
     };
     if (editId) {
-      await supabase.from('staff').update(payload).eq('id', editId);
+      const { error } = await supabase.from('staff').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('staff').insert(payload);
+      const { error } = await supabase.from('staff').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -80,7 +84,8 @@ export function StaffPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer ce membre du personnel ?')) return;
-    await supabase.from('staff').delete().eq('id', id);
+    const { error } = await supabase.from('staff').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

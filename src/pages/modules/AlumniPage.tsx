@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, GraduationCap } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const emptyForm = { first_name: '', last_name: '', graduation_year: '', current_
 
 export function AlumniPage() {
   const { school } = useAuth();
+  const { showError } = useToast();
   const [alumni, setAlumni] = useState<Alumni[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -78,9 +80,11 @@ export function AlumniPage() {
       phone: form.phone || null,
     };
     if (editId) {
-      await supabase.from('alumni').update(payload).eq('id', editId);
+      const { error } = await supabase.from('alumni').update(payload).eq('id', editId);
+      if (error) { showError(error.message); setSaving(false); return; }
     } else {
-      await supabase.from('alumni').insert(payload);
+      const { error } = await supabase.from('alumni').insert(payload);
+      if (error) { showError(error.message); setSaving(false); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -89,7 +93,8 @@ export function AlumniPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cet ancien élève ?')) return;
-    await supabase.from('alumni').delete().eq('id', id);
+    const { error } = await supabase.from('alumni').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { Save, BarChart3 } from 'lucide-react';
 
@@ -9,6 +10,7 @@ interface Subject { id: string; name: string; }
 interface Student { id: string; first_name: string; last_name: string; }
 
 export function GradesPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -107,13 +109,15 @@ export function GradesPage() {
       }));
 
     // Delete existing then insert
-    await supabase.from('grades').delete()
+    const { error: delErr } = await supabase.from('grades').delete()
       .eq('school_id', school.id)
       .eq('class_id', selectedClass)
       .eq('subject_id', selectedSubject)
       .eq('term', selectedTerm);
+    if (delErr) { showError(delErr.message); setSaving(false); return; }
     if (records.length > 0) {
-      await supabase.from('grades').insert(records);
+      const { error } = await supabase.from('grades').insert(records);
+      if (error) { showError(error.message); setSaving(false); return; }
     }
     setSaving(false);
     setSaved(true);

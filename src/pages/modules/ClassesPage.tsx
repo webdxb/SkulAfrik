@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, School } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface ClassItem {
 const emptyForm = { name: '', level: '', capacity: '' };
 
 export function ClassesPage() {
+  const { showError } = useToast();
   const { school } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,9 +68,11 @@ export function ClassesPage() {
       capacity: form.capacity ? parseInt(form.capacity) : null,
     };
     if (editId) {
-      await supabase.from('classes').update(payload).eq('id', editId);
+      const { error } = await supabase.from('classes').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('classes').insert(payload);
+      const { error } = await supabase.from('classes').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -77,7 +81,8 @@ export function ClassesPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette classe ?')) return;
-    await supabase.from('classes').delete().eq('id', id);
+    const { error } = await supabase.from('classes').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 

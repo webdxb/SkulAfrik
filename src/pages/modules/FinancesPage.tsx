@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface Transaction {
 const emptyForm = { type: 'income', category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] };
 
 export function FinancesPage() {
+  const { showError } = useToast();
   const { school, profile } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,9 +77,11 @@ export function FinancesPage() {
       created_by: profile.id,
     };
     if (editId) {
-      await supabase.from('accounting_entries').update(payload).eq('id', editId);
+      const { error } = await supabase.from('accounting_entries').update(payload).eq('id', editId);
+      if (error) { showError(error.message); return; }
     } else {
-      await supabase.from('accounting_entries').insert(payload);
+      const { error } = await supabase.from('accounting_entries').insert(payload);
+      if (error) { showError(error.message); return; }
     }
     setSaving(false);
     setModalOpen(false);
@@ -86,7 +90,8 @@ export function FinancesPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette transaction ?')) return;
-    await supabase.from('accounting_entries').delete().eq('id', id);
+    const { error } = await supabase.from('accounting_entries').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
     loadData();
   }
 
