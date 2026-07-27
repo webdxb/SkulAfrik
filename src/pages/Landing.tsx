@@ -24,7 +24,7 @@ export function LandingPage() {
             Gérez votre école<br />avec <span className="text-emerald-600">simplicité</span>
           </h1>
           <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto">
-            Skul Afrik centralise élèves, notes, présences, finances et communications dans une plateforme unique, sécurisée et adaptée aux établissements africains.
+            Klaso centralise élèves, notes, présences, finances et communications dans une plateforme unique, sécurisée et adaptée aux établissements africains.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
             <Link to="/signup" className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">Démarrer l'essai gratuit</Link>
@@ -63,7 +63,7 @@ export function LandingPage() {
       <footer className="border-t border-slate-100 py-8">
         <div className="mx-auto max-w-7xl px-4 flex items-center justify-between">
           <Logo height={36} />
-          <p className="text-sm text-slate-400">© 2026 Skul Afrik. Tous droits réservés.</p>
+          <p className="text-sm text-slate-400">© 2026 Klaso. Tous droits réservés.</p>
         </div>
       </footer>
     </div>

@@ -99,7 +99,7 @@ export function OnboardingPage() {
       <div className="mx-auto max-w-2xl">
         <div className="text-center mb-8">
           <Logo height={48} />
-          <h1 className="mt-6 font-heading text-2xl font-bold text-slate-900">Bienvenue sur Skul Afrik</h1>
+          <h1 className="mt-6 font-heading text-2xl font-bold text-slate-900">Bienvenue sur Klaso</h1>
           <p className="mt-2 text-sm text-slate-500">Configurons votre compte en quelques étapes.</p>
         </div>
 

@@ -37,13 +37,13 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
           <div>
             <h4 className="text-sm font-semibold text-white mb-3">Contact</h4>
             <ul className="space-y-2 text-sm">
-              <li>hello@skulafrik.com</li>
+              <li>hello@klaso.com</li>
               <li>Douala · Lagos · Nairobi · Dubai</li>
             </ul>
           </div>
         </div>
         <div className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-3">
-          <span>© {new Date().getFullYear()} SKUL AFRIK. {t('footer.rights')}</span>
+          <span>© {new Date().getFullYear()} KLASO. {t('footer.rights')}</span>
           <span>Built for Africa, ready for the world.</span>
         </div>
       </div>
