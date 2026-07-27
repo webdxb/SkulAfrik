@@ -126,3 +126,60 @@ CREATE POLICY "schedule_slots_member_read" ON public.schedule_slots FOR SELECT
 DROP POLICY IF EXISTS "schedule_slots_admin_write" ON public.schedule_slots;
 CREATE POLICY "schedule_slots_admin_write" ON public.schedule_slots FOR ALL
   TO authenticated USING (public.is_school_admin(school_id)) WITH CHECK (public.is_school_admin(school_id));
+
+-- 5. custom_roles / custom_role_permissions were built as global, super-admin-only tables,
+-- but the Settings page lets a *school admin* create/manage roles for their own school.
+-- Scope them per school and let school admins manage their own roles.
+ALTER TABLE public.custom_roles ADD COLUMN IF NOT EXISTS school_id uuid REFERENCES public.schools(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS custom_roles_school_id_idx ON public.custom_roles(school_id);
+-- A role name only needs to be unique within a school, not platform-wide.
+ALTER TABLE public.custom_roles DROP CONSTRAINT IF EXISTS custom_roles_name_key;
+CREATE UNIQUE INDEX IF NOT EXISTS custom_roles_school_name_key ON public.custom_roles(school_id, name);
+
+DROP POLICY IF EXISTS "sa_select_custom_roles" ON public.custom_roles;
+CREATE POLICY "custom_roles_read" ON public.custom_roles FOR SELECT TO authenticated USING (
+  public.is_super_admin()
+  OR (school_id IS NOT NULL AND public.is_school_member(school_id))
+  OR (school_id IS NULL AND is_system = true AND is_active = true)
+);
+DROP POLICY IF EXISTS "sa_insert_custom_roles" ON public.custom_roles;
+CREATE POLICY "custom_roles_insert" ON public.custom_roles FOR INSERT TO authenticated WITH CHECK (
+  public.is_super_admin() OR (school_id IS NOT NULL AND public.is_school_admin(school_id))
+);
+DROP POLICY IF EXISTS "sa_update_custom_roles" ON public.custom_roles;
+CREATE POLICY "custom_roles_update" ON public.custom_roles FOR UPDATE TO authenticated USING (
+  public.is_super_admin() OR (school_id IS NOT NULL AND public.is_school_admin(school_id))
+) WITH CHECK (
+  public.is_super_admin() OR (school_id IS NOT NULL AND public.is_school_admin(school_id))
+);
+DROP POLICY IF EXISTS "sa_delete_custom_roles" ON public.custom_roles;
+CREATE POLICY "custom_roles_delete" ON public.custom_roles FOR DELETE TO authenticated USING (
+  public.is_super_admin() OR (school_id IS NOT NULL AND public.is_school_admin(school_id))
+);
+
+DROP POLICY IF EXISTS "sa_select_crp" ON public.custom_role_permissions;
+CREATE POLICY "crp_read" ON public.custom_role_permissions FOR SELECT TO authenticated USING (
+  public.is_super_admin()
+  OR EXISTS (SELECT 1 FROM public.custom_roles cr WHERE cr.id = role_id AND (
+    (cr.school_id IS NOT NULL AND public.is_school_member(cr.school_id))
+    OR (cr.school_id IS NULL AND cr.is_active = true)
+  ))
+);
+DROP POLICY IF EXISTS "sa_insert_crp" ON public.custom_role_permissions;
+CREATE POLICY "crp_insert" ON public.custom_role_permissions FOR INSERT TO authenticated WITH CHECK (
+  public.is_super_admin()
+  OR EXISTS (SELECT 1 FROM public.custom_roles cr WHERE cr.id = role_id AND cr.school_id IS NOT NULL AND public.is_school_admin(cr.school_id))
+);
+DROP POLICY IF EXISTS "sa_update_crp" ON public.custom_role_permissions;
+CREATE POLICY "crp_update" ON public.custom_role_permissions FOR UPDATE TO authenticated USING (
+  public.is_super_admin()
+  OR EXISTS (SELECT 1 FROM public.custom_roles cr WHERE cr.id = role_id AND cr.school_id IS NOT NULL AND public.is_school_admin(cr.school_id))
+) WITH CHECK (
+  public.is_super_admin()
+  OR EXISTS (SELECT 1 FROM public.custom_roles cr WHERE cr.id = role_id AND cr.school_id IS NOT NULL AND public.is_school_admin(cr.school_id))
+);
+DROP POLICY IF EXISTS "sa_delete_crp" ON public.custom_role_permissions;
+CREATE POLICY "crp_delete" ON public.custom_role_permissions FOR DELETE TO authenticated USING (
+  public.is_super_admin()
+  OR EXISTS (SELECT 1 FROM public.custom_roles cr WHERE cr.id = role_id AND cr.school_id IS NOT NULL AND public.is_school_admin(cr.school_id))
+);

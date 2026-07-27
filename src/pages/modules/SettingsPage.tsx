@@ -63,12 +63,13 @@ export function SettingsPage() {
   }, [school]);
 
   useEffect(() => {
-    loadRoles();
-  }, []);
+    if (school) loadRoles();
+  }, [school]);
 
   async function loadRoles() {
+    if (!school) return;
     setLoadingRoles(true);
-    const { data: rolesData } = await supabase.from('custom_roles').select('id, name, description, is_active').order('created_at');
+    const { data: rolesData } = await supabase.from('custom_roles').select('id, name, description, is_active').eq('school_id', school.id).order('created_at');
     setRoles((rolesData || []) as CustomRole[]);
 
     if ((rolesData || []).length > 0) {
@@ -96,9 +97,10 @@ export function SettingsPage() {
   }
 
   async function handleCreateRole() {
-    if (!newRole.name) return;
+    if (!newRole.name || !school) return;
     setSavingRole(true);
     const { data } = await supabase.from('custom_roles').insert({
+      school_id: school.id,
       name: newRole.name,
       description: newRole.description || null,
       is_system: false,

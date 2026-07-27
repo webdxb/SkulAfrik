@@ -25,7 +25,7 @@ interface PayrollItem {
   status: string;
 }
 
-const emptyForm = { staff_name: '', month: new Date().toISOString().slice(0, 7), base_salary: '', bonuses: '', deductions: '', status: 'pending' };
+const emptyForm = { staff_id: '', month: new Date().toISOString().slice(0, 7), base_salary: '', bonuses: '', deductions: '', status: 'pending' };
 
 export function PayrollPage() {
   const { school, profile } = useAuth();
@@ -84,10 +84,9 @@ export function PayrollPage() {
   }
 
   function openEdit(item: PayrollItem) {
-    const name = item.staff_id ? staffMap[item.staff_id] || '' : '';
     setEditId(item.id);
     setForm({
-      staff_name: name,
+      staff_id: item.staff_id || '',
       month: runs.find((r) => r.id === item.run_id)?.period_start || '',
       base_salary: String(item.gross || ''),
       bonuses: '',
@@ -126,7 +125,7 @@ export function PayrollPage() {
     if (runId) {
       const payload = {
         run_id: runId,
-        staff_id: null,
+        staff_id: form.staff_id || null,
         teacher_id: null,
         gross: baseSalary,
         deductions,
@@ -224,8 +223,13 @@ export function PayrollPage() {
         <Modal title={editId ? 'Modifier la fiche de paie' : 'Ajouter une fiche de paie'} onClose={() => setModalOpen(false)}>
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nom du personnel</label>
-              <input className={inputCls} value={form.staff_name} onChange={(e) => setForm({ ...form, staff_name: e.target.value })} placeholder="Nom complet" />
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Membre du personnel</label>
+              <select className={inputCls} value={form.staff_id} onChange={(e) => setForm({ ...form, staff_id: e.target.value })}>
+                <option value="">Sélectionner...</option>
+                {staff.map((s) => (
+                  <option key={s.id} value={s.id}>{s.last_name} {s.first_name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Mois</label>
