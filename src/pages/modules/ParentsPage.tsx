@@ -38,9 +38,10 @@ export function ParentsPage() {
     const counts: Record<string, number> = {};
     if (list.length > 0) {
       const { data: links } = await supabase
-        .from('student_parents')
+        .from('parent_eleve')
         .select('parent_id')
-        .in('parent_id', list.map((p) => p.id));
+        .in('parent_id', list.map((p) => p.id))
+        .eq('statut_verifie', true);
       (links || []).forEach((l: any) => {
         counts[l.parent_id] = (counts[l.parent_id] || 0) + 1;
       });

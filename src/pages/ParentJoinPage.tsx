@@ -26,20 +26,20 @@ export function ParentJoinPage() {
     if (Object.keys(errs).length) return;
 
     setLoading(true);
-    const { data, error } = await supabase.from('inscription_codes').select('eleve_id, phone_hint, students!inner(first_name, last_name)').eq('code', code.trim()).maybeSingle();
+    const { data, error } = await supabase.rpc('verify_inscription_code', { p_code: code.trim() });
     setLoading(false);
 
-    if (error || !data) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) {
       setSubmitError('Code invalide ou introuvable. Vérifiez le code imprimé sur le reçu d\'inscription.');
       return;
     }
-    if ((data as any).used_at) {
+    if (row.used_at) {
       setSubmitError('Ce code a déjà été utilisé. Contactez l\'établissement si besoin.');
       return;
     }
-    const student = (data as any).students;
-    setMatchedStudent({ first_name: student.first_name, last_name: student.last_name });
-    setPhoneHint((data as any).phone_hint || '');
+    setMatchedStudent({ first_name: row.first_name, last_name: row.last_name });
+    setPhoneHint(row.phone_hint || '');
     setStep('otp');
   };
 
@@ -58,20 +58,14 @@ export function ParentJoinPage() {
       setSubmitError('Code OTP incorrect. Vérifiez le SMS envoyé au numéro enregistré par l\'école.');
       return;
     }
-    // Mark code used + create parent_eleve link
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); setSubmitError('Session expirée. Reconnectez-vous.'); return; }
-    const { data: codeRow } = await supabase.from('inscription_codes').select('eleve_id, tenant_id').eq('code', code.trim()).maybeSingle();
-    if (!codeRow) { setLoading(false); setSubmitError('Erreur: code introuvable.'); return; }
-    const { error: linkErr } = await supabase.from('parent_eleve').insert({ parent_id: user.id, eleve_id: codeRow.eleve_id, tenant_id: codeRow.tenant_id, type_lien: 'tuteur', statut_verifie: true });
+    // Atomically validate the code, create the parent<->student link, and mark the code used.
+    const { error: linkErr } = await supabase.rpc('complete_inscription_link', { p_code: code.trim(), p_role: 'parent' });
+    setLoading(false);
     if (linkErr) {
-      setLoading(false);
       if (linkErr.message.includes('duplicate') || linkErr.message.includes('unique')) setSubmitError('Vous êtes déjà lié à cet élève.');
       else setSubmitError(linkErr.message);
       return;
     }
-    await supabase.from('inscription_codes').update({ used_at: new Date().toISOString() }).eq('code', code.trim());
-    setLoading(false);
     setStep('done');
   };
 

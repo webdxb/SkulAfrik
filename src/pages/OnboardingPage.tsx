@@ -19,7 +19,7 @@ export function OnboardingPage() {
   const [schoolName, setSchoolName] = useState('');
   const [country, setCountry] = useState('Côte d\'Ivoire');
   const [city, setCity] = useState('');
-  const [schoolType, setSchoolType] = useState('primaire');
+  const [schoolType, setSchoolType] = useState('primary');
   const [salesCode, setSalesCode] = useState('');
   const [planId, setPlanId] = useState('00000000-0000-0000-0000-000000000002');
 
@@ -34,20 +34,21 @@ export function OnboardingPage() {
   const submitAdmin = async () => {
     setLoading(true); setError('');
     try {
-      // Create school
+      // Resolve the optional sales/commercial code first (safe RPC, works even before school membership)
+      let salesCodeId: string | null = null;
+      if (salesCode.trim()) {
+        const { data: resolvedId } = await supabase.rpc('resolve_sales_code', { p_code: salesCode.trim() });
+        salesCodeId = resolvedId || null;
+      }
+
+      // Create school — column is "type" (not "school_type"), "legal_name" is required,
+      // and plan/trial fields live directly on the schools row (there is no separate "subscriptions" table).
       const { data: school, error: schErr } = await supabase.from('schools').insert({
-        name: schoolName, country, city, school_type: schoolType,
+        name: schoolName, legal_name: schoolName, country, city, type: schoolType,
+        plan_id: planId, subscription_status: 'trial', sales_code_id: salesCodeId,
         trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
       }).select().single();
       if (schErr) throw schErr;
-
-      // Create subscription (trial)
-      await supabase.from('subscriptions').insert({ school_id: school.id, plan_id: planId, status: 'trial' });
-
-      // Create sales code if provided
-      if (salesCode.trim()) {
-        await supabase.from('sales_codes').insert({ school_id: school.id, code: salesCode.trim().toUpperCase(), label: 'Code principal' });
-      }
 
       // Update profile
       await supabase.from('profiles').update({ role: 'admin', school_id: school.id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
@@ -60,11 +61,11 @@ export function OnboardingPage() {
   const submitParent = async () => {
     setLoading(true); setError('');
     try {
-      // Find school by sales code
-      const { data: code } = await supabase.from('sales_codes').select('school_id, used').eq('code', linkCode.trim().toUpperCase()).maybeSingle();
-      if (!code) { setError('Code de liaison introuvable. Vérifiez le code fourni par l\'école.'); setLoading(false); return; }
+      // Validate + consume the school's inscription code and create the parent<->student link atomically.
+      const { data: result, error: rpcErr } = await supabase.rpc('complete_inscription_link', { p_code: linkCode.trim(), p_role: 'parent' });
+      if (rpcErr) throw rpcErr;
 
-      await supabase.from('profiles').update({ role: 'parent', school_id: code.school_id, first_name: firstName, last_name: lastName, phone, sales_code: linkCode.trim().toUpperCase(), onboarding_completed: true }).eq('id', user!.id);
+      await supabase.from('profiles').update({ role: 'parent', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
       await refresh();
       navigate('/dashboard');
     } catch (e: any) { setError(e.message); }
@@ -74,10 +75,11 @@ export function OnboardingPage() {
   const submitStudent = async () => {
     setLoading(true); setError('');
     try {
-      const { data: code } = await supabase.from('sales_codes').select('school_id').eq('code', linkCode.trim().toUpperCase()).maybeSingle();
-      if (!code) { setError('Code de liaison introuvable.'); setLoading(false); return; }
+      // Validate + consume the inscription code and link this login to the pre-registered student record.
+      const { data: result, error: rpcErr } = await supabase.rpc('complete_inscription_link', { p_code: linkCode.trim(), p_role: 'student' });
+      if (rpcErr) throw rpcErr;
 
-      await supabase.from('profiles').update({ role: 'student', school_id: code.school_id, first_name: firstName, last_name: lastName, phone, sales_code: linkCode.trim().toUpperCase(), onboarding_completed: true }).eq('id', user!.id);
+      await supabase.from('profiles').update({ role: 'student', school_id: result.tenant_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
       await refresh();
       navigate('/dashboard');
     } catch (e: any) { setError(e.message); }
@@ -137,7 +139,7 @@ export function OnboardingPage() {
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Ville</label><input value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label><select value={schoolType} onChange={(e) => setSchoolType(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"><option value="primaire">Primaire</option><option value="secondaire">Secondaire</option><option value="universite">Université</option><option value="mixte">Mixte</option></select></div>
+                  <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label><select value={schoolType} onChange={(e) => setSchoolType(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"><option value="primary">Primaire</option><option value="secondary">Secondaire</option><option value="university">Université</option><option value="other">Mixte</option></select></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Téléphone</label><input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 </div>
                 <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Code commercial (optionnel)</label><input value={salesCode} onChange={(e) => setSalesCode(e.target.value)} placeholder="ex: SKUL2026" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>

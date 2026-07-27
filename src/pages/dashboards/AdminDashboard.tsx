@@ -68,12 +68,12 @@ export function AdminDashboard() {
     (async () => {
       setLoading(true);
       const [studentsRes, teachersRes, classesRes, revenueRes, expensesRes, activityRes] = await Promise.all([
-        supabase.from('eleves').select('id', { count: 'exact', head: true }).eq('school_id', school.id),
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', school.id),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('school_id', school.id).eq('role', 'teacher'),
         supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', school.id),
-        supabase.from('transactions').select('amount').eq('school_id', school.id).eq('type', 'income').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-        supabase.from('transactions').select('amount').eq('school_id', school.id).eq('type', 'expense').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-        supabase.from('activity_logs').select('id, description, created_at, type').eq('school_id', school.id).order('created_at', { ascending: false }).limit(6),
+        supabase.from('accounting_entries').select('amount').eq('school_id', school.id).eq('type', 'income').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        supabase.from('accounting_entries').select('amount').eq('school_id', school.id).eq('type', 'expense').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        supabase.from('audit_logs').select('id, action, created_at').eq('school_id', school.id).order('created_at', { ascending: false }).limit(6),
       ]);
       if (cancelled) return;
       const revenue = (revenueRes.data || []).reduce((sum, r) => sum + (r.amount || 0), 0);
@@ -85,7 +85,7 @@ export function AdminDashboard() {
         revenue,
         expenses,
       });
-      setActivities((activityRes.data || []) as ActivityItem[]);
+      setActivities((activityRes.data || []).map((a: any) => ({ id: a.id, description: a.action, created_at: a.created_at, type: 'audit' })));
       setLoading(false);
     })();
     return () => { cancelled = true; };

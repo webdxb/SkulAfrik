@@ -46,7 +46,7 @@ export function ParentDashboard() {
       // Get verified children via parent_eleve
       const { data: links } = await supabase
         .from('parent_eleve')
-        .select('eleve_id, eleve:eleves(id, first_name, last_name, class_id)')
+        .select('eleve_id, eleve:students(id, first_name, last_name, class_id)')
         .eq('parent_id', profile.id)
         .eq('statut_verifie', true);
 
@@ -74,25 +74,26 @@ export function ParentDashboard() {
           className = cls?.name || null;
         }
 
-        // Average grade
+        // Average grade, normalized to /20 (grades can have different max_value scales)
         const { data: grades } = await supabase
           .from('grades')
-          .select('value')
-          .eq('eleve_id', child.id);
+          .select('grade_value, max_value')
+          .eq('student_id', child.id);
         if (grades && grades.length > 0) {
-          avgGrade = grades.reduce((sum, g) => sum + (g.value || 0), 0) / grades.length;
+          const normalized = grades.map((g: any) => ((g.grade_value || 0) / (g.max_value || 20)) * 20);
+          avgGrade = normalized.reduce((sum, v) => sum + v, 0) / normalized.length;
         }
 
         // Attendance rate
         const { count: presentCount } = await supabase
           .from('attendance')
           .select('id', { count: 'exact', head: true })
-          .eq('eleve_id', child.id)
+          .eq('student_id', child.id)
           .eq('status', 'present');
         const { count: totalCount } = await supabase
           .from('attendance')
           .select('id', { count: 'exact', head: true })
-          .eq('eleve_id', child.id);
+          .eq('student_id', child.id);
         if (totalCount && totalCount > 0) {
           attendanceRate = ((presentCount || 0) / totalCount) * 100;
         }
