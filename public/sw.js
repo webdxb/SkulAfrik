@@ -1,12 +1,12 @@
 /// <reference types="vite/client" />
 
-// Service Worker for SKUL AFRIK — offline-first caching
+// Service Worker for KLASO — offline-first caching
 // Strategy:
 //   - App shell (HTML/JS/CSS): stale-while-revalidate → instant load offline
 //   - API/Supabase: network-first, fallback to cache
 //   - Images: cache-first
 
-const CACHE_VERSION = 'skul-v1';
+const CACHE_VERSION = 'klaso-v1';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMG_CACHE = `${CACHE_VERSION}-img`;
@@ -28,7 +28,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith('skul-') && k !== SHELL_CACHE && k !== API_CACHE && k !== IMG_CACHE)
+          .filter((k) => k.startsWith('klaso-') && k !== SHELL_CACHE && k !== API_CACHE && k !== IMG_CACHE)
           .map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
