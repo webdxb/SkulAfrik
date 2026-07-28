@@ -12,6 +12,7 @@ import { Dashboard } from './pages/Dashboard';
 import { SuperAdminApp } from './pages/SuperAdminApp';
 import { AccessDenied } from './pages/AccessDenied';
 import { ParentJoinPage } from './pages/ParentJoinPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 function Router() {
   const { user, profile, isSuperAdmin, subscriptionActive, loading } = useAuth();
@@ -24,8 +25,12 @@ function Router() {
   if (!user) {
     if (path === '/login' || path === '/signup') return <LoginPage />;
     if (path === '/parent/rejoindre') return <LoginPage />;
+    if (path === '/reset-password') return <LoginPage />;
     return <LandingPage />;
   }
+
+  // Handles the Supabase recovery-link session before any onboarding/role logic kicks in
+  if (path === '/reset-password') return <ResetPasswordPage />;
 
   // Super Admin — full access, no restrictions
   if (isSuperAdmin) return <SuperAdminApp />;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { useToast } from '../lib/toast';
 import { Logo } from '../components/Logo';
 import { Link, useRoute, navigate } from '../lib/router';
 import { LogOut, Building2, Users, CreditCard, BarChart3, Shield, Settings, Bell, Menu, X } from 'lucide-react';
@@ -288,18 +289,93 @@ function SalesCodesSection() {
 }
 
 function StaffSection() { return <div className="space-y-5"><h1 className="font-heading text-2xl font-bold text-slate-900">Performance du staff</h1><p className="text-sm text-slate-500">Statistiques de performance du staff plateforme en cours de développement.</p></div>; }
-function AuditSection() { return <div className="space-y-5"><h1 className="font-heading text-2xl font-bold text-slate-900">Journal d'audit</h1><p className="text-sm text-slate-500">Logs d'audit de la plateforme en cours de développement.</p></div>; }
-function SupportSection() {
-  const [tickets, setTickets] = useState<any[]>([]);
+function AuditSection() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('support_tickets').select('*, profiles(email)').order('created_at', { ascending: false });
-      setTickets(data || []);
+      const { data } = await supabase
+        .from('audit_logs')
+        .select('id, actor_email, action, target_type, target_id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setLogs(data || []);
+      setLoading(false);
     })();
   }, []);
+
+  return (
+    <div className="space-y-5">
+      <h1 className="font-heading text-2xl font-bold text-slate-900">Journal d'audit</h1>
+      <p className="text-sm text-slate-500">100 dernières actions enregistrées sur la plateforme.</p>
+      {loading ? (
+        <p className="text-sm text-slate-400">Chargement...</p>
+      ) : logs.length === 0 ? (
+        <p className="text-sm text-slate-400">Aucune action enregistrée pour le moment.</p>
+      ) : (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Date</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Auteur</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Action</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">Cible</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+              {logs.map((l) => (
+                <tr key={l.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(l.created_at).toLocaleString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{l.actor_email || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{l.action}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{l.target_type ? `${l.target_type}${l.target_id ? ` #${l.target_id}` : ''}` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+function SupportSection() {
+  const { showError, showSuccess } = useToast();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadTickets() {
+    const { data } = await supabase.from('support_tickets').select('*, profiles(email)').order('created_at', { ascending: false });
+    setTickets(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadTickets(); }, []);
+
+  async function changeStatus(id: string, status: string) {
+    const { error } = await supabase.from('support_tickets').update({ status }).eq('id', id);
+    if (error) { showError(error.message); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: user.id, actor_email: user.email,
+        action: `support_ticket.status_changed.${status}`, target_type: 'support_ticket', target_id: id,
+      });
+    }
+    showSuccess('Statut mis à jour.');
+    setTickets((prev) => prev.map((t) => t.id === id ? { ...t, status } : t));
+  }
+
+  const statusStyle: Record<string, string> = {
+    open: 'bg-amber-100 text-amber-700',
+    in_progress: 'bg-indigo-100 text-indigo-700',
+    resolved: 'bg-emerald-100 text-emerald-700',
+    closed: 'bg-slate-100 text-slate-600',
+  };
+
   return (
     <div className="space-y-5">
       <h1 className="font-heading text-2xl font-bold text-slate-900">Tickets de support</h1>
+      {loading ? <p className="text-sm text-slate-400">Chargement...</p> : (
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
@@ -314,12 +390,24 @@ function SupportSection() {
                 <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{t.subject}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{t.profiles?.email || '—'}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{t.priority}</td>
-                <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${t.status === 'open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{t.status}</span></td>
+                <td className="px-4 py-3">
+                  <select
+                    value={t.status}
+                    onChange={(e) => changeStatus(t.id, e.target.value)}
+                    className={`rounded-full border-0 px-2.5 py-0.5 text-xs font-medium outline-none ${statusStyle[t.status] || statusStyle.open}`}
+                  >
+                    <option value="open">Ouvert</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="resolved">Résolu</option>
+                    <option value="closed">Fermé</option>
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
