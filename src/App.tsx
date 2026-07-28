@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from './lib/auth';
 import { RouterProvider, useRoute } from './lib/router';
 import { ToastProvider } from './lib/toast';
+import { I18nProvider } from './lib/i18n';
 import { useEffect } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
@@ -52,11 +53,13 @@ function Router() {
 export function App() {
   return (
     <RouterProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <Router />
-        </ToastProvider>
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Router />
+          </ToastProvider>
+        </AuthProvider>
+      </I18nProvider>
     </RouterProvider>
   );
 }

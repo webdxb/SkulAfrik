@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { navigate } from '../lib/router';
 import { Logo } from '../components/Logo';
-import { Building2, User, GraduationCap, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Building2, User, GraduationCap, BookOpen, Check, ArrowRight, ArrowLeft } from 'lucide-react';
 
 type Step = 'select' | 'form' | 'done';
-type Role = 'admin' | 'parent' | 'student';
+type Role = 'admin' | 'parent' | 'student' | 'teacher';
 
 export function OnboardingPage() {
   const { user, profile, refresh } = useAuth();
@@ -89,10 +89,31 @@ export function OnboardingPage() {
     setLoading(false);
   };
 
-  const submit = () => { if (role === 'admin') submitAdmin(); else if (role === 'parent') submitParent(); else submitStudent(); };
+  const submitTeacher = async () => {
+    setLoading(true); setError('');
+    try {
+      // Validate + consume the school's teacher invite code.
+      const { data: result, error: rpcErr } = await supabase.rpc('complete_teacher_invite', { p_code: linkCode.trim() });
+      if (rpcErr) throw rpcErr;
+
+      const { error: profErr } = await supabase.from('profiles').update({ role: 'teacher', school_id: result.school_id, first_name: firstName, last_name: lastName, phone, onboarding_completed: true }).eq('id', user!.id);
+      if (profErr) throw profErr;
+      await refresh();
+      navigate('/dashboard');
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const submit = () => {
+    if (role === 'admin') submitAdmin();
+    else if (role === 'parent') submitParent();
+    else if (role === 'teacher') submitTeacher();
+    else if (role === 'student') submitStudent();
+  };
 
   const roles = [
     { id: 'admin' as Role, icon: Building2, label: 'Admin d\'établissement', desc: 'Je gère une école', color: 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100' },
+    { id: 'teacher' as Role, icon: BookOpen, label: 'Enseignant', desc: 'Je donne des cours', color: 'border-sky-500 bg-sky-50 hover:bg-sky-100' },
     { id: 'parent' as Role, icon: User, label: 'Parent', desc: 'Je suis parent d\'élève', color: 'border-emerald-500 bg-emerald-50 hover:bg-emerald-100' },
     { id: 'student' as Role, icon: GraduationCap, label: 'Élève', desc: 'Je suis élève', color: 'border-amber-500 bg-amber-50 hover:bg-amber-100' },
   ];
@@ -150,16 +171,16 @@ export function OnboardingPage() {
               </div>
             )}
 
-            {(role === 'parent' || role === 'student') && (
+            {(role === 'parent' || role === 'student' || role === 'teacher') && (
               <div className="space-y-4">
-                <h2 className="font-heading text-lg font-bold text-slate-900">{role === 'parent' ? 'Informations personnelles' : 'Mon profil élève'}</h2>
+                <h2 className="font-heading text-lg font-bold text-slate-900">{role === 'parent' ? 'Informations personnelles' : role === 'teacher' ? 'Mon profil enseignant' : 'Mon profil élève'}</h2>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Prénom</label><input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Nom</label><input value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 </div>
                 <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Téléphone</label><input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Code de liaison {role === 'parent' ? '(fourni par l\'école)' : '(fourni par l\'école)'}</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Code {role === 'teacher' ? "d'invitation" : 'de liaison'} (fourni par l'école)</label>
                   <input value={linkCode} onChange={(e) => setLinkCode(e.target.value)} placeholder="ex: SKUL2026" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 uppercase" />
                   <p className="mt-1.5 text-xs text-slate-400">Ce code vous rattache à votre établissement scolaire.</p>
                 </div>

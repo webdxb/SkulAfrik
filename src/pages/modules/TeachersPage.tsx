@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
-import { Search, Users, Phone } from 'lucide-react';
+import { useToast } from '../../lib/toast';
+import { PageHeader, EmptyState, Modal, inputCls, Card } from '../../components/ui';
+import { Search, Users, Phone, UserPlus, Copy, Check } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -12,12 +13,33 @@ interface Profile {
   role: string;
 }
 
+interface InviteCode {
+  id: string;
+  code: string;
+  label: string | null;
+  used_at: string | null;
+  created_at: string;
+}
+
+function randomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
 export function TeachersPage() {
   const { school } = useAuth();
+  const { showError } = useToast();
   const [teachers, setTeachers] = useState<Profile[]>([]);
   const [classCounts, setClassCounts] = useState<Record<string, number>>({});
+  const [invites, setInvites] = useState<InviteCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteLabel, setInviteLabel] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (school) loadData();
@@ -46,7 +68,38 @@ export function TeachersPage() {
       });
     }
     setClassCounts(counts);
+
+    const { data: inviteRows, error: invErr } = await supabase
+      .from('teacher_invite_codes')
+      .select('id, code, label, used_at, created_at')
+      .eq('school_id', school.id)
+      .is('used_at', null)
+      .order('created_at', { ascending: false });
+    if (invErr) showError(invErr.message);
+    setInvites((inviteRows || []) as InviteCode[]);
+
     setLoading(false);
+  }
+
+  async function handleGenerateInvite() {
+    if (!school) return;
+    setGenerating(true);
+    const { error } = await supabase.from('teacher_invite_codes').insert({
+      school_id: school.id,
+      code: randomCode(),
+      label: inviteLabel.trim() || null,
+    });
+    setGenerating(false);
+    if (error) { showError(error.message); return; }
+    setInviteLabel('');
+    setInviteModalOpen(false);
+    loadData();
+  }
+
+  function copyCode(id: string, code: string) {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   }
 
   const filtered = teachers.filter((t) => {
@@ -56,7 +109,34 @@ export function TeachersPage() {
 
   return (
     <div>
-      <PageHeader title="Enseignants" subtitle="Liste des enseignants de l'établissement" />
+      <PageHeader
+        title="Enseignants"
+        subtitle="Liste des enseignants de l'établissement"
+        action={
+          <button onClick={() => setInviteModalOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <UserPlus size={16} /> Inviter un enseignant
+          </button>
+        }
+      />
+
+      {invites.length > 0 && (
+        <Card className="mb-4 p-4">
+          <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Codes d'invitation en attente</p>
+          <div className="space-y-2">
+            {invites.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2">
+                <div>
+                  <span className="font-mono text-sm font-semibold tracking-wider text-slate-900 dark:text-slate-100">{inv.code}</span>
+                  {inv.label && <span className="ml-2 text-xs text-slate-500">{inv.label}</span>}
+                </div>
+                <button onClick={() => copyCode(inv.id, inv.code)} className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                  {copiedId === inv.id ? <><Check size={14} /> Copié</> : <><Copy size={14} /> Copier</>}
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="mb-4 p-4">
         <div className="relative">
@@ -100,6 +180,23 @@ export function TeachersPage() {
             </tbody>
           </table>
         </Card>
+      )}
+
+      {inviteModalOpen && (
+        <Modal title="Inviter un enseignant" onClose={() => setInviteModalOpen(false)}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Un code unique sera généré. Transmettez-le à l'enseignant : il devra le saisir lors de son inscription sur Klaso pour rejoindre votre établissement.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Repère (optionnel, ex: nom de l'enseignant)</label>
+              <input className={inputCls} value={inviteLabel} onChange={(e) => setInviteLabel(e.target.value)} placeholder="ex: M. Traoré" />
+            </div>
+            <button onClick={handleGenerateInvite} disabled={generating} className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+              {generating ? 'Génération...' : 'Générer le code'}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -97,6 +97,22 @@ const fr: Dict = {
   'common.search': 'Rechercher',
   'common.logout': 'Déconnexion',
   'common.settings': 'Paramètres',
+  'trust.line': 'Multilingue, multi-devise, pensé pour plus de 20 pays africains.',
+  'features.f1.title': 'Élèves & scolarité',
+  'features.f1.desc': 'Inscriptions, dossiers, bulletins et présences, centralisés.',
+  'features.f2.title': 'Notes & bulletins',
+  'features.f2.desc': 'Saisie des notes, moyennes calculées automatiquement, bulletins générés.',
+  'features.f3.title': 'Messagerie intégrée',
+  'features.f3.desc': 'Enseignants, parents et administration échangent au même endroit.',
+  'features.f4.title': 'Finances & paie',
+  'features.f4.desc': 'Frais de scolarité, paie du personnel et comptabilité suivis en temps réel.',
+  'features.f5.title': 'Transport & bibliothèque',
+  'features.f5.desc': 'Itinéraires de transport et catalogue documentaire gérés simplement.',
+  'features.f6.title': 'Cloisonnement par établissement',
+  'features.f6.desc': 'Chaque école est isolée. Vos données ne sont visibles que par vous.',
+  'cta.final.title': 'Prêt à digitaliser votre établissement ?',
+  'cta.final.subtitle': 'Essai gratuit de 7 jours. Aucune carte requise.',
+  'cta.final.button': 'Créer mon compte',
 };
 
 const en: Dict = {
@@ -192,6 +208,22 @@ const en: Dict = {
   'common.search': 'Search',
   'common.logout': 'Sign out',
   'common.settings': 'Settings',
+  'trust.line': 'Multilingual, multi-currency, built for 20+ African countries.',
+  'features.f1.title': 'Students & enrollment',
+  'features.f1.desc': 'Registrations, records, report cards and attendance, centralized.',
+  'features.f2.title': 'Grades & report cards',
+  'features.f2.desc': 'Grade entry, automatic averages, report cards generated in one click.',
+  'features.f3.title': 'Built-in messaging',
+  'features.f3.desc': 'Teachers, parents and administration talk in one place.',
+  'features.f4.title': 'Finance & payroll',
+  'features.f4.desc': 'Tuition fees, staff payroll and accounting tracked in real time.',
+  'features.f5.title': 'Transport & library',
+  'features.f5.desc': 'Transport routes and library catalog, simply managed.',
+  'features.f6.title': 'Per-school isolation',
+  'features.f6.desc': 'Every school is sandboxed. Your data is visible to you alone.',
+  'cta.final.title': 'Ready to digitize your school?',
+  'cta.final.subtitle': '7-day free trial. No card required.',
+  'cta.final.button': 'Create my account',
 };
 
 const dictionaries: Record<Locale, Dict> = { fr, en };
@@ -206,12 +238,12 @@ const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('skul_locale') : null;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('klaso_locale') : null;
     return (stored as Locale) || 'fr';
   });
 
   useEffect(() => {
-    localStorage.setItem('skul_locale', locale);
+    localStorage.setItem('klaso_locale', locale);
     document.documentElement.lang = locale;
   }, [locale]);
 
