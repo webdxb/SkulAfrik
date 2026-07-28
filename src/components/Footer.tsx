@@ -53,7 +53,7 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
 
 export function CookieBanner({ onManageCookies }: { onManageCookies: () => void }) {
   const { t } = useI18n();
-  const [visible, setVisible] = useState(() => !localStorage.getItem('skul_cookie_choice'));
+  const [visible, setVisible] = useState(() => !localStorage.getItem('klaso_cookie_choice'));
   const [customizing, setCustomizing] = useState(false);
   const [prefs, setPrefs] = useState({ necessary: true, analytics: false, marketing: false });
 
@@ -65,7 +65,7 @@ export function CookieBanner({ onManageCookies }: { onManageCookies: () => void 
       : choice === 'none'
         ? { necessary: true, analytics: false, marketing: false }
         : prefs;
-    localStorage.setItem('skul_cookie_choice', JSON.stringify(stored));
+    localStorage.setItem('klaso_cookie_choice', JSON.stringify(stored));
     setVisible(false);
   };
 

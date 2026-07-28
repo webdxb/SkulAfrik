@@ -1,7 +1,9 @@
 import { Logo } from '../components/Logo';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { Footer, CookieBanner } from '../components/Footer';
 import { Link } from '../lib/router';
 import { useI18n } from '../lib/i18n';
+import { useState } from 'react';
 import { Building2, BookOpen, User, GraduationCap, GraduationCap as GradIcon, MessageSquare, Wallet, Bus, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const COUNTRIES = [
@@ -15,6 +17,11 @@ const FEATURE_ICONS = [GradIcon, BookOpen, MessageSquare, Wallet, Bus, ShieldChe
 
 export function LandingPage() {
   const { t } = useI18n();
+  const [cookieBannerKey, setCookieBannerKey] = useState(0);
+  const manageCookies = () => {
+    localStorage.removeItem('klaso_cookie_choice');
+    setCookieBannerKey((k) => k + 1);
+  };
   const features = [1, 2, 3, 4, 5, 6].map((n) => ({
     icon: FEATURE_ICONS[n - 1],
     title: t(`features.f${n}.title`),
@@ -169,12 +176,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-100 py-8">
-        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Logo height={32} />
-          <p className="text-sm text-slate-400">© {new Date().getFullYear()} KLASO. {t('footer.rights')}</p>
-        </div>
-      </footer>
+      <Footer onManageCookies={manageCookies} />
+      <CookieBanner key={cookieBannerKey} onManageCookies={manageCookies} />
     </div>
   );
 }

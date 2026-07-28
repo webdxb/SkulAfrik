@@ -3,6 +3,8 @@ import { Link, useRoute, navigate } from '../lib/router';
 import { Logo } from './Logo';
 import { ReactNode, useState } from 'react';
 import { LogOut, Menu, X, Bell } from 'lucide-react';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 const MODULES = [
   { path: 'students', label: 'Élèves', icon: '🎓', roles: ['admin', 'teacher'] },
@@ -82,6 +84,8 @@ export function DashboardShell({ children, paywall = false }: { children: ReactN
             <span className="text-sm font-medium text-slate-500">{profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : profile?.email}</span>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
+            <ThemeToggle />
             <button className="relative text-slate-400 hover:text-slate-600"><Bell size={20} /><span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500" /></button>
             <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700">{(profile?.first_name?.[0] || profile?.email?.[0] || '?').toUpperCase()}</div>
           </div>

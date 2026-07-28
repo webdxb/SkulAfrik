@@ -13,13 +13,13 @@ const Ctx = createContext<ThemeCtx>({ theme: 'light', toggleTheme: () => {}, set
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
-    const stored = localStorage.getItem('skul_theme') as Theme | null;
+    const stored = localStorage.getItem('klaso_theme') as Theme | null;
     if (stored) return stored;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
-    localStorage.setItem('skul_theme', theme);
+    localStorage.setItem('klaso_theme', theme);
     const root = document.documentElement;
     if (theme === 'dark') root.classList.add('dark');
     else root.classList.remove('dark');
