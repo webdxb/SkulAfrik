@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
-import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
+import { PageHeader, EmptyState, Modal, inputCls, Card } from '../../components/ui';
 import { Send, Plus, MessageSquare, Search } from 'lucide-react';
 
 interface Message {
@@ -26,11 +26,13 @@ export function MessagesPage() {
   const { school, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [contacts, setContacts] = useState<Record<string, string>>({});
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCompose, setShowCompose] = useState(false);
   const [compose, setCompose] = useState({ recipient_id: '', subject: '', body: '' });
   const [sending, setSending] = useState(false);
+  const [openMessage, setOpenMessage] = useState<Message | null>(null);
 
   useEffect(() => {
     if (school && profile) loadData();
@@ -48,7 +50,7 @@ export function MessagesPage() {
     const list = (data || []) as Message[];
     setMessages(list);
 
-    // Load contact names
+    // Load contact names (for past conversations list display)
     const ids = new Set<string>();
     list.forEach((m) => { ids.add(m.sender_id); ids.add(m.recipient_id); });
     if (ids.size > 0) {
@@ -60,7 +62,25 @@ export function MessagesPage() {
       (profiles || []).forEach((p: any) => { map[p.id] = `${p.last_name} ${p.first_name}`; });
       setContacts(map);
     }
+
+    // Load every school member as a possible recipient (not just people already messaged)
+    const { data: schoolMembers } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .eq('school_id', school.id)
+      .neq('id', profile.id)
+      .order('last_name');
+    setMembers((schoolMembers || []).map((m: any) => ({ id: m.id, name: `${m.last_name} ${m.first_name}` })));
+
     setLoading(false);
+  }
+
+  async function openMessageDetail(m: Message) {
+    setOpenMessage(m);
+    if (!m.read_at && m.recipient_id === profile?.id) {
+      const { error } = await supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', m.id);
+      if (!error) setMessages((prev) => prev.map((x) => x.id === m.id ? { ...x, read_at: new Date().toISOString() } : x));
+    }
   }
 
   async function handleSend() {
@@ -116,7 +136,7 @@ export function MessagesPage() {
                 const isSent = m.sender_id === profile?.id;
                 const otherName = contacts[isSent ? m.recipient_id : m.sender_id] || '—';
                 return (
-                  <Card key={m.id} className={`p-4 ${!m.read_at && !isSent ? 'border-l-4 border-l-indigo-500' : ''}`}>
+                  <Card key={m.id} onClick={() => openMessageDetail(m)} className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${!m.read_at && !isSent ? 'border-l-4 border-l-indigo-500' : ''}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -148,8 +168,8 @@ export function MessagesPage() {
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destinataire</label>
               <select className={inputCls} value={compose.recipient_id} onChange={(e) => setCompose({ ...compose, recipient_id: e.target.value })}>
                 <option value="">Sélectionner un destinataire...</option>
-                {Object.entries(contacts).filter(([id]) => id !== profile?.id).map(([id, name]) => (
-                  <option key={id} value={id}>{name}</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
             </div>
@@ -171,6 +191,18 @@ export function MessagesPage() {
             </div>
           </div>
         </Card>
+      )}
+
+      {openMessage && (
+        <Modal title={openMessage.subject || '(Sans objet)'} onClose={() => setOpenMessage(null)}>
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400">
+              {openMessage.sender_id === profile?.id ? `À: ${contacts[openMessage.recipient_id] || '—'}` : `De: ${contacts[openMessage.sender_id] || '—'}`}
+              {' · '}{new Date(openMessage.created_at).toLocaleString('fr-FR')}
+            </p>
+            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{openMessage.body || ''}</p>
+          </div>
+        </Modal>
       )}
     </div>
   );

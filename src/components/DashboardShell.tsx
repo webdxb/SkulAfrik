@@ -1,7 +1,8 @@
 import { useAuth } from '../lib/auth';
 import { Link, useRoute, navigate } from '../lib/router';
 import { Logo } from './Logo';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { LogOut, Menu, X, Bell } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
@@ -60,6 +61,21 @@ export function DashboardShell({ children, paywall = false }: { children: ReactN
     return planModules.includes(planKey);
   });
   const cleanPath = path.replace(/^\/dashboard\/?/, '');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', profile.id)
+        .is('read_at', null);
+      if (!cancelled) setUnreadCount(count || 0);
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id, cleanPath]);
 
   if (paywall) {
     return (
@@ -108,7 +124,10 @@ export function DashboardShell({ children, paywall = false }: { children: ReactN
           <div className="flex items-center gap-3">
             <LanguageSwitcher compact />
             <ThemeToggle />
-            <button className="relative text-slate-400 hover:text-slate-600"><Bell size={20} /><span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500" /></button>
+            <button onClick={() => navigate('/dashboard/messages')} className="relative text-slate-400 hover:text-slate-600" aria-label="Messages non lus">
+              <Bell size={20} />
+              {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500" />}
+            </button>
             <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700">{(profile?.first_name?.[0] || profile?.email?.[0] || '?').toUpperCase()}</div>
           </div>
         </header>

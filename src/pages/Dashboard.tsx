@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
+import { useToast } from '../lib/toast';
 import { useRoute, Link } from '../lib/router';
 import { DashboardShell } from '../components/DashboardShell';
 import { AdminDashboard } from './dashboards/AdminDashboard';
@@ -63,23 +66,51 @@ export function Dashboard({ paywall }: { paywall?: boolean }) {
 }
 
 function PricingPlaceholder() {
+  const { school, refresh } = useAuth();
+  const { showError, showSuccess } = useToast();
+  const [plans, setPlans] = useState<{ id: string; name: string; price_monthly: number; features: string[] }[]>([]);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('plans').select('id, name, price_monthly, features').eq('is_active', true).order('sort_order');
+      setPlans((data || []) as any);
+    })();
+  }, []);
+
+  async function choosePlan(planId: string) {
+    if (!school) return;
+    setSaving(planId);
+    const { error } = await supabase.from('schools').update({ plan_id: planId }).eq('id', school.id);
+    setSaving(null);
+    if (error) { showError(error.message); return; }
+    showSuccess('Plan mis à jour.');
+    await refresh();
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="font-heading text-2xl font-bold text-slate-900">Nos plans</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { name: 'Essential', price: '15 000', features: ['Élèves & parents', 'Classes & matières', 'Présences & notes', 'Messagerie'] },
-          { name: 'Pro', price: '35 000', features: ['Tout Essential', 'Enseignants & personnel', 'Examens & bulletins', 'Transport & bibliothèque', 'Finances & rapports'] },
-          { name: 'Enterprise', price: '80 000', features: ['Tout Pro', 'Anciens élèves', 'Comptabilité & paie', 'Support prioritaire', 'Stockage étendu'] },
-        ].map((p) => (
-          <div key={p.name} className="bg-white rounded-xl border border-slate-100 p-6">
-            <h3 className="font-heading text-lg font-bold text-slate-900">{p.name}</h3>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{p.price}<span className="text-sm font-normal text-slate-400"> FCFA/mois</span></p>
-            <ul className="mt-4 space-y-2">{p.features.map((f) => <li key={f} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {f}</li>)}</ul>
-            <button className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Choisir</button>
-          </div>
-        ))}
-      </div>
+      {plans.length === 0 ? (
+        <p className="text-sm text-slate-400">Chargement...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {plans.map((p) => (
+            <div key={p.id} className={`bg-white rounded-xl border p-6 ${school?.plan_id === p.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-100'}`}>
+              <h3 className="font-heading text-lg font-bold text-slate-900">{p.name}</h3>
+              <p className="mt-2 text-3xl font-bold text-slate-900">${p.price_monthly.toFixed(0)}<span className="text-sm font-normal text-slate-400"> /mois</span></p>
+              <ul className="mt-4 space-y-2">{(p.features || []).map((f) => <li key={f} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {f}</li>)}</ul>
+              <button
+                onClick={() => choosePlan(p.id)}
+                disabled={saving === p.id || school?.plan_id === p.id}
+                className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {school?.plan_id === p.id ? 'Plan actuel' : saving === p.id ? 'Activation...' : 'Choisir'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
