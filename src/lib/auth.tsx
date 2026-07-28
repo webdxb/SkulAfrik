@@ -19,12 +19,14 @@ export interface School {
   name: string;
   country: string | null;
   city: string | null;
-  school_type: string;
+  type: string;
   phone: string | null;
   email: string | null;
   address: string | null;
   logo_url: string | null;
   trial_ends_at: string | null;
+  subscription_status: string | null;
+  plan_id: string | null;
 }
 
 interface AuthContextValue {

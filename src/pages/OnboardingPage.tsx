@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { navigate } from '../lib/router';
@@ -7,6 +7,13 @@ import { Building2, User, GraduationCap, BookOpen, Check, ArrowRight, ArrowLeft 
 
 type Step = 'select' | 'form' | 'done';
 type Role = 'admin' | 'parent' | 'student' | 'teacher';
+
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  price_monthly: number;
+}
 
 export function OnboardingPage() {
   const { user, profile, refresh } = useAuth();
@@ -21,7 +28,19 @@ export function OnboardingPage() {
   const [city, setCity] = useState('');
   const [schoolType, setSchoolType] = useState('primary');
   const [salesCode, setSalesCode] = useState('');
-  const [planId, setPlanId] = useState('00000000-0000-0000-0000-000000000002');
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [planId, setPlanId] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('plans').select('id, name, slug, price_monthly').eq('is_active', true).order('sort_order');
+      const list = (data || []) as Plan[];
+      setPlans(list);
+      // Default to the "pro" plan if present, otherwise the first available plan.
+      const preferred = list.find((p) => p.slug === 'pro') || list[0];
+      if (preferred) setPlanId(preferred.id);
+    })();
+  }, []);
 
   // Parent/Student form
   const [firstName, setFirstName] = useState('');
@@ -34,6 +53,7 @@ export function OnboardingPage() {
   const submitAdmin = async () => {
     setLoading(true); setError('');
     try {
+      if (!planId) throw new Error('Aucun plan disponible pour le moment. Réessayez dans un instant.');
       // Resolve the optional sales/commercial code first (safe RPC, works even before school membership)
       let salesCodeId: string | null = null;
       if (salesCode.trim()) {
@@ -167,7 +187,15 @@ export function OnboardingPage() {
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Téléphone</label><input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 </div>
                 <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Code commercial (optionnel)</label><input value={salesCode} onChange={(e) => setSalesCode(e.target.value)} placeholder="ex: SKUL2026" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Plan d'abonnement</label><select value={planId} onChange={(e) => setPlanId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none"><option value="00000000-0000-0000-0000-000000000001">Essential — 15 000 FCFA/mois</option><option value="00000000-0000-0000-0000-000000000002">Pro — 35 000 FCFA/mois</option><option value="00000000-0000-0000-0000-000000000003">Enterprise — 80 000 FCFA/mois</option></select><p className="mt-1 text-xs text-slate-400">Essai gratuit de 7 jours. Aucune carte requise.</p></div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Plan d'abonnement</label>
+                  <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none">
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name} — ${p.price_monthly.toFixed(0)}/mois</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-400">Essai gratuit de 7 jours. Aucune carte requise.</p>
+                </div>
               </div>
             )}
 

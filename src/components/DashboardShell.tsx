@@ -30,13 +30,35 @@ const MODULES = [
   { path: 'settings', label: 'Paramètres', icon: '⚙️', roles: ['admin'] },
 ];
 
+// Maps a sidebar module path to the key used in plans.modules (jsonb).
+// null = core module, always available regardless of plan (not plan-gated).
+const PLAN_MODULE_KEY: Record<string, string | null> = {
+  students: 'students', parents: 'parents_portal', teachers: 'teachers', staff: 'staff',
+  classes: null, subjects: null,
+  attendance: 'attendance', grades: 'grades', exams: 'exams', bulletins: null,
+  calendar: 'calendar', transport: 'transport', library: 'library', alumni: 'alumni',
+  finances: 'finances', accounting: 'accounting', payroll: 'payroll', reports: 'reports',
+  messages: 'messaging', support: null, settings: null,
+};
+
 export function DashboardShell({ children, paywall = false }: { children: ReactNode; paywall?: boolean }) {
-  const { profile, school, signOut } = useAuth();
+  const { profile, school, signOut, planModules } = useAuth();
   const path = useRoute();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = profile?.role || 'parent';
 
-  const visibleModules = MODULES.filter((m) => m.roles.includes(role));
+  // Matches school_has_module() in SQL: during an active trial, every module is accessible
+  // regardless of the selected plan — restriction only applies once the trial has ended.
+  const inActiveTrial = school?.subscription_status === 'trial' && !!school?.trial_ends_at && new Date(school.trial_ends_at) > new Date();
+
+  const visibleModules = MODULES.filter((m) => {
+    if (!m.roles.includes(role)) return false;
+    if (inActiveTrial) return true;
+    const planKey = PLAN_MODULE_KEY[m.path];
+    if (!planKey) return true; // core module, not plan-gated
+    if (planModules === null) return true; // still loading, or no plan context (avoid flashing an empty sidebar)
+    return planModules.includes(planKey);
+  });
   const cleanPath = path.replace(/^\/dashboard\/?/, '');
 
   if (paywall) {

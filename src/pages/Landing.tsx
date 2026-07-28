@@ -3,8 +3,18 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Footer, CookieBanner } from '../components/Footer';
 import { Link } from '../lib/router';
 import { useI18n } from '../lib/i18n';
-import { useState } from 'react';
-import { Building2, BookOpen, User, GraduationCap, GraduationCap as GradIcon, MessageSquare, Wallet, Bus, ShieldCheck, ArrowRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
+import { Building2, BookOpen, User, GraduationCap, GraduationCap as GradIcon, MessageSquare, Wallet, Bus, ShieldCheck, ArrowRight, Check } from 'lucide-react';
+
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  price_monthly: number;
+  price_annual: number;
+  features: string[];
+}
 
 const COUNTRIES = [
   { name: "Côte d'Ivoire", flag: '🇨🇮' }, { name: 'Sénégal', flag: '🇸🇳' }, { name: 'Cameroun', flag: '🇨🇲' },
@@ -18,10 +28,19 @@ const FEATURE_ICONS = [GradIcon, BookOpen, MessageSquare, Wallet, Bus, ShieldChe
 export function LandingPage() {
   const { t } = useI18n();
   const [cookieBannerKey, setCookieBannerKey] = useState(0);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [annual, setAnnual] = useState(false);
   const manageCookies = () => {
     localStorage.removeItem('klaso_cookie_choice');
     setCookieBannerKey((k) => k + 1);
   };
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('plans').select('id, name, slug, price_monthly, price_annual, features').eq('is_active', true).order('sort_order');
+      setPlans((data || []) as Plan[]);
+    })();
+  }, []);
   const features = [1, 2, 3, 4, 5, 6].map((n) => ({
     icon: FEATURE_ICONS[n - 1],
     title: t(`features.f${n}.title`),
@@ -165,8 +184,63 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section id="pricing" className="mx-auto max-w-7xl px-4 sm:px-6 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-slate-900">{t('pricing.title')}</h2>
+          <p className="mt-3 text-slate-500">{t('pricing.subtitle')}</p>
+        </div>
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <span className={`text-sm font-medium ${!annual ? 'text-slate-900' : 'text-slate-400'}`}>{t('pricing.monthly')}</span>
+          <button
+            onClick={() => setAnnual(!annual)}
+            className={`relative h-6 w-11 rounded-full transition-colors ${annual ? 'bg-[#009CDE]' : 'bg-slate-200'}`}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
+          <span className={`text-sm font-medium ${annual ? 'text-slate-900' : 'text-slate-400'}`}>{t('pricing.annual')}</span>
+          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">{t('pricing.save')}</span>
+        </div>
+
+        {plans.length === 0 ? (
+          <p className="text-center text-sm text-slate-400">{t('common.loading')}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {plans.map((p, i) => {
+              const price = annual ? p.price_annual / 12 : p.price_monthly;
+              const isPopular = p.slug === 'pro';
+              return (
+                <div key={p.id} className={`relative rounded-2xl border p-6 flex flex-col ${isPopular ? 'border-[#003087] shadow-xl shadow-[#003087]/10' : 'border-slate-200'}`}>
+                  {isPopular && (
+                    <span className="absolute -top-3 left-6 rounded-full bg-[#003087] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Populaire</span>
+                  )}
+                  <h3 className="font-heading text-lg font-bold text-slate-900">{p.name}</h3>
+                  <p className="mt-4">
+                    <span className="font-heading text-3xl font-bold text-slate-900">${price.toFixed(0)}</span>
+                    <span className="text-sm text-slate-400">{t('pricing.permonth')}</span>
+                  </p>
+                  <ul className="mt-6 space-y-2.5 flex-1">
+                    {(p.features || []).map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
+                        <Check size={15} className="mt-0.5 text-[#009CDE] flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/signup"
+                    className={`mt-6 rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition-colors ${isPopular ? 'bg-[#003087] text-white hover:bg-[#00457C]' : 'border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    {t('pricing.cta.trial')}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Final CTA */}
-      <section id="pricing" className="bg-[#003087] py-20">
+      <section className="bg-[#003087] py-20">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white">{t('cta.final.title')}</h2>
           <p className="mt-4 text-[#B8D4F0]">{t('cta.final.subtitle')}</p>

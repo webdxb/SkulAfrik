@@ -142,7 +142,7 @@ function SchoolsSection() {
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.country || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.city || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.school_type || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.type || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{new Date(s.created_at).toLocaleDateString('fr-FR')}</td>
                 </tr>
               ))}
