@@ -63,9 +63,11 @@ export function OnboardingPage() {
       }
 
       // Create school — column is "type" (not "school_type"), "legal_name" is required,
+      // owner_user_id is required by RLS (schools_owner_insert: WITH CHECK owner_user_id = auth.uid()),
       // and plan/trial fields live directly on the schools row (there is no separate "subscriptions" table).
       const { data: school, error: schErr } = await supabase.from('schools').insert({
         name: schoolName, legal_name: schoolName, country, city, type: schoolType,
+        owner_user_id: user!.id,
         plan_id: planId, subscription_status: 'trial', sales_code_id: salesCodeId,
         trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
       }).select().single();
