@@ -3,7 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
-import { Plus, Search, Pencil, Trash2, Bus } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Bus, Users } from 'lucide-react';
 
 interface TransportRoute {
   id: string;
@@ -14,18 +14,25 @@ interface TransportRoute {
   capacity: number;
 }
 
+interface StudentOption { id: string; name: string; }
+interface Assignment { id: string; student_id: string; paid: boolean; }
+
 const emptyForm = { name: '', driver_name: '', driver_phone: '', vehicle_plate: '', capacity: '' };
 
 export function TransportPage() {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const { school } = useAuth();
   const [routes, setRoutes] = useState<TransportRoute[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [ridersRoute, setRidersRoute] = useState<TransportRoute | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [newRiderId, setNewRiderId] = useState('');
 
   useEffect(() => {
     if (school) loadData();
@@ -34,13 +41,41 @@ export function TransportPage() {
   async function loadData() {
     if (!school) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('transport_routes')
-      .select('id, name, driver_name, driver_phone, vehicle_plate, capacity')
-      .eq('school_id', school.id)
-      .order('name');
-    setRoutes((data || []) as TransportRoute[]);
+    const [routesRes, studentsRes] = await Promise.all([
+      supabase.from('transport_routes').select('id, name, driver_name, driver_phone, vehicle_plate, capacity').eq('school_id', school.id).order('name'),
+      supabase.from('students').select('id, first_name, last_name').eq('school_id', school.id).order('last_name'),
+    ]);
+    setRoutes((routesRes.data || []) as TransportRoute[]);
+    setStudents((studentsRes.data || []).map((s: any) => ({ id: s.id, name: `${s.last_name} ${s.first_name}` })));
     setLoading(false);
+  }
+
+  async function openRiders(r: TransportRoute) {
+    setRidersRoute(r);
+    setNewRiderId('');
+    const { data } = await supabase.from('student_transport').select('id, student_id, paid').eq('route_id', r.id);
+    setAssignments((data || []) as Assignment[]);
+  }
+
+  async function addRider() {
+    if (!ridersRoute || !newRiderId) return;
+    const { data, error } = await supabase.from('student_transport').insert({ student_id: newRiderId, route_id: ridersRoute.id, paid: false }).select('id, student_id, paid').single();
+    if (error) { showError(error.message); return; }
+    setAssignments((prev) => [...prev, data as Assignment]);
+    setNewRiderId('');
+    showSuccess('Élève ajouté à la route.');
+  }
+
+  async function togglePaid(a: Assignment) {
+    const { error } = await supabase.from('student_transport').update({ paid: !a.paid }).eq('id', a.id);
+    if (error) { showError(error.message); return; }
+    setAssignments((prev) => prev.map((x) => x.id === a.id ? { ...x, paid: !x.paid } : x));
+  }
+
+  async function removeRider(a: Assignment) {
+    const { error } = await supabase.from('student_transport').delete().eq('id', a.id);
+    if (error) { showError(error.message); return; }
+    setAssignments((prev) => prev.filter((x) => x.id !== a.id));
   }
 
   const filtered = routes.filter((r) => {
@@ -137,6 +172,7 @@ export function TransportPage() {
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{r.capacity}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex gap-2">
+                      <button onClick={() => openRiders(r)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Gérer les élèves"><Users size={16} /></button>
                       <button onClick={() => openEdit(r)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
                       <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><Trash2 size={16} /></button>
                     </div>
@@ -174,6 +210,40 @@ export function TransportPage() {
             <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
               {saving ? 'Enregistrement...' : 'Enregistrer'}
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {ridersRoute && (
+        <Modal title={`Élèves — ${ridersRoute.name}`} onClose={() => setRidersRoute(null)}>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <select className={inputCls} value={newRiderId} onChange={(e) => setNewRiderId(e.target.value)}>
+                <option value="">Ajouter un élève...</option>
+                {students.filter((s) => !assignments.some((a) => a.student_id === s.id)).map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <button onClick={addRider} disabled={!newRiderId} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">Ajouter</button>
+            </div>
+            {assignments.length === 0 ? (
+              <p className="text-sm text-slate-400">Aucun élève assigné à cette route pour le moment.</p>
+            ) : (
+              <div className="space-y-2">
+                {assignments.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-800 px-3 py-2">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{students.find((s) => s.id === a.student_id)?.name || '—'}</span>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => togglePaid(a)} className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {a.paid ? 'Payé' : 'Non payé'}
+                      </button>
+                      <button onClick={() => removeRider(a)} className="text-slate-400 hover:text-rose-600"><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-slate-400">{assignments.length} / {ridersRoute.capacity} places occupées</p>
           </div>
         </Modal>
       )}
