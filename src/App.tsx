@@ -49,8 +49,9 @@ function Router() {
   // Block non-super-admins from /super-admin URLs
   if (path.startsWith('/super-admin')) return <AccessDenied />;
 
-  // Trial expired → paywall (super admins bypass)
-  if (profile?.school_id && !subscriptionActive && path !== '/pricing') {
+  // Trial expired → paywall. Only the school admin is responsible for billing —
+  // parents, teachers and students must never be blocked or asked to pay.
+  if (profile?.role === 'admin' && profile?.school_id && !subscriptionActive && path !== '/pricing') {
     return <Dashboard paywall />;
   }
 

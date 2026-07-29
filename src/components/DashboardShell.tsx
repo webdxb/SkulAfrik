@@ -44,7 +44,7 @@ const PLAN_MODULE_KEY: Record<string, string | null> = {
 };
 
 export function DashboardShell({ children, paywall = false }: { children: ReactNode; paywall?: boolean }) {
-  const { profile, school, signOut, planModules } = useAuth();
+  const { profile, school, signOut, planModules, subscriptionActive } = useAuth();
   const path = useRoute();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = profile?.role || 'parent';
@@ -132,7 +132,14 @@ export function DashboardShell({ children, paywall = false }: { children: ReactN
             <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700">{(profile?.first_name?.[0] || profile?.email?.[0] || '?').toUpperCase()}</div>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 p-4 lg:p-6">
+          {role !== 'admin' && !subscriptionActive && (
+            <div className="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+              L'abonnement de votre établissement doit être renouvelé. Certaines fonctionnalités peuvent être limitées — contactez l'administration de votre école, vous n'avez rien à payer vous-même.
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );
