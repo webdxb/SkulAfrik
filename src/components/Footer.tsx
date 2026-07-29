@@ -15,11 +15,11 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
               <Logo height={36} />
             </div>
             <p className="mt-4 text-sm text-slate-400 max-w-xs">
-              The pan-African school management platform. Built for Africa, ready for the world.
+              {t('footer.tagline')}
             </p>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white mb-3">Product</h4>
+            <h4 className="text-sm font-semibold text-white mb-3">{t('footer.product')}</h4>
             <ul className="space-y-2 text-sm">
               <li><a href="/#features" onClick={(e) => { e.preventDefault(); navigate('/#features'); }} className="hover:text-white">{t('nav.features')}</a></li>
               <li><Link to="/pricing" className="hover:text-white">{t('nav.pricing')}</Link></li>
@@ -27,7 +27,7 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white mb-3">Legal</h4>
+            <h4 className="text-sm font-semibold text-white mb-3">{t('footer.legal')}</h4>
             <ul className="space-y-2 text-sm">
               <li><Link to="/privacy" className="hover:text-white">{t('footer.privacy')}</Link></li>
               <li><Link to="/terms" className="hover:text-white">{t('footer.terms')}</Link></li>
@@ -35,16 +35,16 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white mb-3">Contact</h4>
+            <h4 className="text-sm font-semibold text-white mb-3">{t('footer.contact')}</h4>
             <ul className="space-y-2 text-sm">
               <li>hello@klaso.com</li>
-              <li>Douala · Lagos · Nairobi · Dubai</li>
+              <li>Yaoundé · Dubaï</li>
             </ul>
           </div>
         </div>
         <div className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-3">
           <span>© {new Date().getFullYear()} KLASO. {t('footer.rights')}</span>
-          <span>Built for Africa, ready for the world.</span>
+          <span>{t('footer.company')}</span>
         </div>
       </div>
     </footer>

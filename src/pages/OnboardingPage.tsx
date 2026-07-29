@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { navigate } from '../lib/router';
+import { countries } from '../lib/countries';
 import { Logo } from '../components/Logo';
 import { Building2, User, GraduationCap, BookOpen, Check, ArrowRight, ArrowLeft } from 'lucide-react';
 
@@ -179,7 +180,7 @@ export function OnboardingPage() {
                 </div>
                 <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Nom de l'école</label><input value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Pays</label><select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none">{['Côte d\'Ivoire','Sénégal','Mali','Burkina Faso','Cameroun','Bénin','Togo','Guinée','Congo','Gabon','Tchad','Niger','Madagascar','RDC','Maroc','Algérie','Tunisie','Ghana','Nigeria','Kenya','Afrique du Sud'].map((c) => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Pays</label><select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none">{countries.slice().sort((a, b) => a.nameFr.localeCompare(b.nameFr)).map((c) => <option key={c.code} value={c.nameFr}>{c.nameFr}</option>)}</select></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Ville</label><input value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

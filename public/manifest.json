@@ -1,7 +1,7 @@
 {
   "name": "KLASO — School Management",
   "short_name": "KLASO",
-  "description": "Plateforme de gestion scolaire pour l'Afrique",
+  "description": "Plateforme internationale de gestion scolaire",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

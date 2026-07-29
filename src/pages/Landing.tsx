@@ -17,10 +17,10 @@ interface Plan {
 }
 
 const COUNTRIES = [
-  { name: "Côte d'Ivoire", flag: '🇨🇮' }, { name: 'Sénégal', flag: '🇸🇳' }, { name: 'Cameroun', flag: '🇨🇲' },
-  { name: 'Maroc', flag: '🇲🇦' }, { name: 'Nigeria', flag: '🇳🇬' }, { name: 'Ghana', flag: '🇬🇭' },
-  { name: 'Kenya', flag: '🇰🇪' }, { name: 'RDC', flag: '🇨🇩' }, { name: 'Tunisie', flag: '🇹🇳' },
-  { name: 'Afrique du Sud', flag: '🇿🇦' }, { name: 'Bénin', flag: '🇧🇯' }, { name: 'Mali', flag: '🇲🇱' },
+  { name: 'France', flag: '🇫🇷' }, { name: 'Émirats arabes unis', flag: '🇦🇪' }, { name: "Côte d'Ivoire", flag: '🇨🇮' },
+  { name: 'Canada', flag: '🇨🇦' }, { name: 'Sénégal', flag: '🇸🇳' }, { name: 'Belgique', flag: '🇧🇪' },
+  { name: 'Maroc', flag: '🇲🇦' }, { name: 'Royaume-Uni', flag: '🇬🇧' }, { name: 'Cameroun', flag: '🇨🇲' },
+  { name: 'Arabie saoudite', flag: '🇸🇦' }, { name: 'Nigeria', flag: '🇳🇬' }, { name: 'Singapour', flag: '🇸🇬' },
 ];
 
 const FEATURE_ICONS = [GradIcon, BookOpen, MessageSquare, Wallet, Bus, ShieldCheck];
