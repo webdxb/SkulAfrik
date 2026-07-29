@@ -356,10 +356,11 @@ function SupportSection() {
     if (error) { showError(error.message); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from('audit_logs').insert({
+      const { error: logErr } = await supabase.from('audit_logs').insert({
         actor_id: user.id, actor_email: user.email,
         action: `support_ticket.status_changed.${status}`, target_type: 'support_ticket', target_id: id,
       });
+      if (logErr) console.warn('Journalisation audit échouée (action principale déjà réussie):', logErr.message);
     }
     showSuccess('Statut mis à jour.');
     setTickets((prev) => prev.map((t) => t.id === id ? { ...t, status } : t));
