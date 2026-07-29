@@ -18,6 +18,7 @@ const MODULES = [
   { path: 'grades', label: 'Notes', icon: '📊', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'exams', label: 'Examens', icon: '📝', roles: ['admin', 'teacher'] },
   { path: 'bulletins', label: 'Bulletins', icon: '📄', roles: ['admin', 'teacher', 'parent'] },
+  { path: 'discipline', label: 'Discipline', icon: '🚨', roles: ['admin', 'teacher'] },
   { path: 'calendar', label: 'Calendrier', icon: '📅', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'transport', label: 'Transport', icon: '🚌', roles: ['admin'] },
   { path: 'library', label: 'Bibliothèque', icon: '📕', roles: ['admin'] },
@@ -36,7 +37,7 @@ const MODULES = [
 const PLAN_MODULE_KEY: Record<string, string | null> = {
   students: 'students', parents: 'parents_portal', teachers: 'teachers', staff: 'staff',
   classes: null, subjects: null,
-  attendance: 'attendance', grades: 'grades', exams: 'exams', bulletins: null,
+  attendance: 'attendance', grades: 'grades', exams: 'exams', bulletins: null, discipline: 'discipline',
   calendar: 'calendar', transport: 'transport', library: 'library', alumni: 'alumni',
   finances: 'finances', accounting: 'accounting', payroll: 'payroll', reports: 'reports',
   messages: 'messaging', support: null, settings: null,

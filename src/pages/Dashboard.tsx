@@ -31,6 +31,7 @@ import { ReportsPage } from './modules/ReportsPage';
 import { MessagesPage } from './modules/MessagesPage';
 import { SupportPage } from './modules/SupportPage';
 import { SettingsPage } from './modules/SettingsPage';
+import { DisciplinePage } from './modules/DisciplinePage';
 
 export function Dashboard({ paywall }: { paywall?: boolean }) {
   const { profile } = useAuth();
@@ -51,7 +52,7 @@ export function Dashboard({ paywall }: { paywall?: boolean }) {
     exams: ExamsPage, bulletins: BulletinsPage, calendar: CalendarPage, transport: TransportPage,
     library: LibraryPage, alumni: AlumniPage, finances: FinancesPage, accounting: AccountingPage,
     payroll: PayrollPage, reports: ReportsPage, messages: MessagesPage, support: SupportPage,
-    settings: SettingsPage,
+    settings: SettingsPage, discipline: DisciplinePage,
   };
 
   const renderPage = () => {
