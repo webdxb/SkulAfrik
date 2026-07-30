@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { formatCurrency, getCurrencyForCountryName } from '../../lib/countries';
 import { Plus, Search, Pencil, Trash2, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Transaction {
@@ -19,6 +20,7 @@ const emptyForm = { type: 'income', category: '', description: '', amount: '', d
 export function FinancesPage() {
   const { showError } = useToast();
   const { school, profile } = useAuth();
+  const currency = getCurrencyForCountryName(school?.country);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -108,7 +110,7 @@ export function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Revenus totaux</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalIncome.toLocaleString()} FCFA</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalIncome, currency)}</p>
             </div>
             <div className="rounded-xl bg-emerald-100 dark:bg-emerald-900/30 p-3"><TrendingUp className="text-emerald-600 dark:text-emerald-400" size={24} /></div>
           </div>
@@ -117,7 +119,7 @@ export function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Dépenses totales</p>
-              <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{totalExpense.toLocaleString()} FCFA</p>
+              <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(totalExpense, currency)}</p>
             </div>
             <div className="rounded-xl bg-rose-100 dark:bg-rose-900/30 p-3"><TrendingDown className="text-rose-600 dark:text-rose-400" size={24} /></div>
           </div>
@@ -126,7 +128,7 @@ export function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Solde</p>
-              <p className={`mt-1 text-2xl font-bold ${balance >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400'}`}>{balance.toLocaleString()} FCFA</p>
+              <p className={`mt-1 text-2xl font-bold ${balance >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(balance, currency)}</p>
             </div>
             <div className="rounded-xl bg-indigo-100 dark:bg-indigo-900/30 p-3"><Wallet className="text-indigo-600 dark:text-indigo-400" size={24} /></div>
           </div>
@@ -173,7 +175,7 @@ export function FinancesPage() {
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.category || '—'}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{t.description || '—'}</td>
                   <td className={`px-4 py-3 font-medium ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                    {t.type === 'income' ? '+' : '-'}{Number(t.amount).toLocaleString()} FCFA
+                    {t.type === 'income' ? '+' : '-'}{formatCurrency(Number(t.amount), currency)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex gap-2">
@@ -207,7 +209,7 @@ export function FinancesPage() {
               <textarea className={inputCls} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Montant (FCFA)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Montant ({currency})</label>
               <input type="number" className={inputCls} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
             <div>

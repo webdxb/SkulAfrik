@@ -5,6 +5,7 @@ import { I18nProvider } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
 import { OfflineBanner } from './lib/useOffline';
 import { ChatWidget } from './components/ChatWidget';
+import { CursorEffect } from './components/CursorEffect';
 import { useEffect } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
@@ -67,18 +68,21 @@ function Router() {
 
 export function App() {
   return (
-    <RouterProvider>
-      <I18nProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <OfflineBanner />
-              <Router />
-              <ChatWidget />
-            </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </I18nProvider>
-    </RouterProvider>
+    <>
+      <CursorEffect />
+      <RouterProvider>
+        <I18nProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <OfflineBanner />
+                <Router />
+                <ChatWidget />
+              </ToastProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </I18nProvider>
+      </RouterProvider>
+    </>
   );
 }

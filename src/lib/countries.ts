@@ -262,3 +262,11 @@ export function formatCurrency(amount: number, currency: string): string {
 export function getCountry(code: string): Country | undefined {
   return countries.find((c) => c.code === code);
 }
+
+// schools.country stores the French display name (set during onboarding), not
+// the ISO code — this resolves the right currency for formatCurrency() from that.
+export function getCurrencyForCountryName(name: string | null | undefined): string {
+  if (!name) return 'USD';
+  const match = countries.find((c) => c.nameFr === name || c.name === name);
+  return match?.currency || 'USD';
+}

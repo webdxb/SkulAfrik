@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { formatCurrency, getCurrencyForCountryName } from '../../lib/countries';
 import { Plus, Search, Pencil, Trash2, Briefcase } from 'lucide-react';
 
 interface Staff {
@@ -19,6 +20,7 @@ const emptyForm = { first_name: '', last_name: '', role: '', phone: '', salary_b
 export function StaffPage() {
   const { showError } = useToast();
   const { school } = useAuth();
+  const currency = getCurrencyForCountryName(school?.country);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -132,7 +134,7 @@ export function StaffPage() {
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.first_name}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.role}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.phone || '—'}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.salary_base ? `${s.salary_base} FCFA` : '—'}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{s.salary_base ? formatCurrency(Number(s.salary_base), currency) : '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex gap-2">
                       <button onClick={() => openEdit(s)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"><Pencil size={16} /></button>
@@ -166,7 +168,7 @@ export function StaffPage() {
               <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Salaire de base (FCFA)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Salaire de base ({currency})</label>
               <input type="number" className={inputCls} value={form.salary_base} onChange={(e) => setForm({ ...form, salary_base: e.target.value })} />
             </div>
             <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">

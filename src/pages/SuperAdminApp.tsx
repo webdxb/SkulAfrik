@@ -98,7 +98,7 @@ function OverviewSection() {
     { label: 'Établissements', value: stats.schools, color: 'border-l-indigo-500' },
     { label: 'Utilisateurs', value: stats.users, color: 'border-l-emerald-500' },
     { label: 'Abonnements', value: stats.subscriptions, color: 'border-l-amber-500' },
-    { label: 'Revenus/mois', value: `${stats.revenue} FCFA`, color: 'border-l-rose-500' },
+    { label: 'Revenus/mois', value: `$${stats.revenue}`, color: 'border-l-rose-500' },
   ];
 
   return (
@@ -233,7 +233,7 @@ function BillingSection() {
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.plans?.name || '—'}</td>
                   <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${s.subscription_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{s.subscription_status}</span></td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.plans?.price_monthly || 0} FCFA</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">${s.plans?.price_monthly || 0}</td>
                 </tr>
               ))}
             </tbody>

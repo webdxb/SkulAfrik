@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
+import { formatCurrency, getCurrencyForCountryName } from '../../lib/countries';
 import { Plus, Search, Pencil, Trash2, CreditCard } from 'lucide-react';
 
 interface Staff { id: string; first_name: string; last_name: string; }
@@ -31,6 +32,7 @@ const emptyForm = { staff_id: '', month: new Date().toISOString().slice(0, 7), b
 export function PayrollPage() {
   const { showError } = useToast();
   const { school, profile } = useAuth();
+  const currency = getCurrencyForCountryName(school?.country);
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [items, setItems] = useState<PayrollItem[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -202,9 +204,9 @@ export function PayrollPage() {
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{name}</td>
                     <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{run?.period_start || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{Number(item.gross).toLocaleString()} FCFA</td>
-                    <td className="px-4 py-3 text-rose-600 dark:text-rose-400">-{Number(item.deductions).toLocaleString()} FCFA</td>
-                    <td className="px-4 py-3 font-medium text-emerald-600 dark:text-emerald-400">{Number(item.net).toLocaleString()} FCFA</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatCurrency(Number(item.gross), currency)}</td>
+                    <td className="px-4 py-3 text-rose-600 dark:text-rose-400">-{formatCurrency(Number(item.deductions), currency)}</td>
+                    <td className="px-4 py-3 font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(Number(item.net), currency)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${item.status === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : item.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
                         {item.status === 'paid' ? 'Payé' : item.status === 'pending' ? 'En attente' : item.status}
@@ -241,21 +243,21 @@ export function PayrollPage() {
               <input type="month" className={inputCls} value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Salaire de base (FCFA)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Salaire de base ({currency})</label>
               <input type="number" className={inputCls} value={form.base_salary} onChange={(e) => setForm({ ...form, base_salary: e.target.value })} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Primes (FCFA)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Primes ({currency})</label>
               <input type="number" className={inputCls} value={form.bonuses} onChange={(e) => setForm({ ...form, bonuses: e.target.value })} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Déductions (FCFA)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Déductions ({currency})</label>
               <input type="number" className={inputCls} value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} />
             </div>
             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-slate-700 dark:text-slate-300">Salaire net calculé</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{netCalculated.toLocaleString()} FCFA</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netCalculated, currency)}</span>
               </div>
             </div>
             <div>

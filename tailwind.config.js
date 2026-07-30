@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Glacial Indifference', 'system-ui', 'sans-serif'],
+        sans: ['Glacial Indifference', 'system-ui', 'sans-serif'],
       },
       colors: {
         // PayPal brand blues (Pal Blue / dark #003087, Pay Blue / light #009CDE)
