@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 import { Logo } from '../components/Logo';
 import { Link, useRoute, navigate } from '../lib/router';
-import { LogOut, Building2, Users, CreditCard, BarChart3, Shield, Settings, Bell, Menu, X } from 'lucide-react';
+import { LogOut, Building2, Users, CreditCard, BarChart3, Shield, Settings, Bell, Menu, X, MessageCircle } from 'lucide-react';
 
 const SECTIONS = [
   { path: 'overview', label: 'Vue d\'ensemble', icon: BarChart3 },
@@ -16,6 +16,7 @@ const SECTIONS = [
   { path: 'staff', label: 'Performance staff', icon: Users },
   { path: 'audit', label: 'Audit', icon: BarChart3 },
   { path: 'support', label: 'Support', icon: Bell },
+  { path: 'live-chat', label: 'Chat en direct', icon: MessageCircle },
   { path: 'settings', label: 'Paramètres', icon: Settings },
 ];
 
@@ -74,6 +75,7 @@ function SuperAdminContent({ section }: { section: string }) {
     case 'staff': return <StaffSection />;
     case 'audit': return <AuditSection />;
     case 'support': return <SupportSection />;
+    case 'live-chat': return <LiveChatSection />;
     case 'settings': return <SettingsSection />;
     default: return <OverviewSection />;
   }
@@ -417,6 +419,143 @@ function SettingsSection() {
     <div className="space-y-5">
       <h1 className="font-heading text-2xl font-bold text-slate-900">Paramètres plateforme</h1>
       <p className="text-sm text-slate-500">Configuration globale de la plateforme Klaso.</p>
+    </div>
+  );
+}
+
+interface ChatConv { id: string; status: string; subject: string | null; updated_at: string; user_id: string; }
+interface ChatMsg { id: string; sender_type: string; content: string; created_at: string; }
+
+function LiveChatSection() {
+  const { profile } = useAuth();
+  const { showError } = useToast();
+  const [conversations, setConversations] = useState<ChatConv[]>([]);
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
+
+  async function loadConversations() {
+    const { data } = await supabase
+      .from('chat_conversations')
+      .select('id, status, subject, updated_at, user_id')
+      .in('status', ['escalated', 'bot'])
+      .order('updated_at', { ascending: false });
+    const list = (data || []) as ChatConv[];
+    setConversations(list);
+    if (list.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, email').in('id', list.map((c) => c.user_id));
+      const map: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { map[p.id] = p.email; });
+      setUserEmails(map);
+    }
+  }
+
+  useEffect(() => {
+    loadConversations();
+    const channel = supabase
+      .channel('super-admin-live-chat')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations' }, () => loadConversations())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    if (!activeId) return;
+    (async () => {
+      const { data } = await supabase.from('chat_messages').select('id, sender_type, content, created_at').eq('conversation_id', activeId).order('created_at', { ascending: true });
+      setMessages((data || []) as ChatMsg[]);
+    })();
+    const channel = supabase
+      .channel(`admin-chat-${activeId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${activeId}` }, (payload) => {
+        setMessages((prev) => (prev.some((m) => m.id === (payload.new as any).id) ? prev : [...prev, payload.new as ChatMsg]));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeId]);
+
+  async function takeConversation(id: string) {
+    const { error } = await supabase.from('chat_conversations').update({ status: 'escalated', agent_id: profile!.id }).eq('id', id);
+    if (error) { showError(error.message); return; }
+    setActiveId(id);
+  }
+
+  async function sendReply() {
+    if (!reply.trim() || !activeId) return;
+    setSending(true);
+    const { error } = await supabase.from('chat_messages').insert({ conversation_id: activeId, sender_type: 'agent', sender_id: profile!.id, content: reply.trim() });
+    setSending(false);
+    if (error) { showError(error.message); return; }
+    setReply('');
+  }
+
+  async function closeConversation() {
+    if (!activeId) return;
+    await supabase.from('chat_conversations').update({ status: 'closed' }).eq('id', activeId);
+    setActiveId(null);
+  }
+
+  return (
+    <div className="space-y-5">
+      <h1 className="font-heading text-2xl font-bold text-slate-900">Chat en direct</h1>
+      <p className="text-sm text-slate-500">Conversations où un client a demandé un agent humain, ou que le bot n'a pas su résoudre.</p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800 max-h-[32rem] overflow-y-auto">
+          {conversations.length === 0 ? (
+            <p className="p-4 text-sm text-slate-400">Aucune conversation en attente.</p>
+          ) : (
+            conversations.map((c) => (
+              <button key={c.id} onClick={() => takeConversation(c.id)} className={`w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 ${activeId === c.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{userEmails[c.user_id] || c.user_id}</p>
+                <p className="mt-0.5 text-xs text-slate-400">{new Date(c.updated_at).toLocaleString('fr-FR')}</p>
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${c.status === 'escalated' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {c.status === 'escalated' ? "En attente d'agent" : 'Bot en cours'}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col h-[32rem]">
+          {!activeId ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-slate-400">Sélectionnez une conversation pour répondre.</div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{userEmails[conversations.find((c) => c.id === activeId)?.user_id || ''] || 'Utilisateur'}</p>
+                <button onClick={closeConversation} className="text-xs font-medium text-slate-400 hover:text-rose-600">Clôturer</button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-slate-50 dark:bg-slate-950">
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.sender_type === 'agent' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
+                      m.sender_type === 'agent' ? 'bg-indigo-600 text-white rounded-br-sm'
+                      : m.sender_type === 'bot' ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-bl-sm'
+                      : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-bl-sm'
+                    }`}>
+                      {m.sender_type === 'bot' && <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Bot</p>}
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-slate-100 dark:border-slate-800 p-3 flex items-center gap-2">
+                <input
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') sendReply(); }}
+                  placeholder="Répondre au client..."
+                  className="flex-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                />
+                <button onClick={sendReply} disabled={!reply.trim() || sending} className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Envoyer</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

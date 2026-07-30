@@ -4,6 +4,7 @@ import { ToastProvider } from './lib/toast';
 import { I18nProvider } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
 import { OfflineBanner } from './lib/useOffline';
+import { ChatWidget } from './components/ChatWidget';
 import { useEffect } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
@@ -73,6 +74,7 @@ export function App() {
             <ToastProvider>
               <OfflineBanner />
               <Router />
+              <ChatWidget />
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
