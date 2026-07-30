@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
+import { payForPlan } from '../lib/flutterwave';
 import { useRoute, Link } from '../lib/router';
 import { DashboardShell } from '../components/DashboardShell';
 import { AdminDashboard } from './dashboards/AdminDashboard';
@@ -67,7 +68,7 @@ export function Dashboard({ paywall }: { paywall?: boolean }) {
 }
 
 function PricingPlaceholder() {
-  const { school, refresh } = useAuth();
+  const { school, profile, refresh } = useAuth();
   const { showError, showSuccess } = useToast();
   const [plans, setPlans] = useState<{ id: string; name: string; price_monthly: number; features: string[] }[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
@@ -79,14 +80,24 @@ function PricingPlaceholder() {
     })();
   }, []);
 
-  async function choosePlan(planId: string) {
-    if (!school) return;
-    setSaving(planId);
-    const { error } = await supabase.from('schools').update({ plan_id: planId }).eq('id', school.id);
-    setSaving(null);
-    if (error) { showError(error.message); return; }
-    showSuccess('Plan mis à jour.');
-    await refresh();
+  async function choosePlan(plan: { id: string; name: string; price_monthly: number }) {
+    if (!school || !profile) return;
+    setSaving(plan.id);
+    await payForPlan({
+      school: { id: school.id, name: school.name, email: school.email },
+      profile: { email: profile.email, first_name: profile.first_name, last_name: profile.last_name, phone: profile.phone },
+      plan,
+      billingPeriod: 'monthly',
+      amount: plan.price_monthly,
+      currency: 'USD',
+      onSuccess: async () => {
+        setSaving(null);
+        showSuccess('Plan mis à jour.');
+        await refresh();
+      },
+      onError: (message) => { setSaving(null); showError(message); },
+      onClose: () => { setSaving(null); },
+    });
   }
 
   return (
@@ -102,11 +113,11 @@ function PricingPlaceholder() {
               <p className="mt-2 text-3xl font-bold text-slate-900">${p.price_monthly.toFixed(0)}<span className="text-sm font-normal text-slate-400"> /mois</span></p>
               <ul className="mt-4 space-y-2">{(p.features || []).map((f) => <li key={f} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {f}</li>)}</ul>
               <button
-                onClick={() => choosePlan(p.id)}
+                onClick={() => choosePlan(p)}
                 disabled={saving === p.id || school?.plan_id === p.id}
                 className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
               >
-                {school?.plan_id === p.id ? 'Plan actuel' : saving === p.id ? 'Activation...' : 'Choisir'}
+                {school?.plan_id === p.id ? 'Plan actuel' : saving === p.id ? 'Paiement...' : 'Choisir'}
               </button>
             </div>
           ))}

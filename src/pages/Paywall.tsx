@@ -1,6 +1,7 @@
 import { useAuth } from '../lib/auth';
 import { Link } from '../lib/router';
 import { supabase } from '../lib/supabase';
+import { payForPlan } from '../lib/flutterwave';
 import { useEffect, useState } from 'react';
 import { Check, ArrowLeft, Loader2, Clock, Lock } from 'lucide-react';
 import { Logo } from '../components/Logo';
@@ -16,7 +17,7 @@ interface Plan {
 }
 
 export function PaywallPage() {
-  const { school, refresh } = useAuth();
+  const { school, profile, refresh } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,15 +32,26 @@ export function PaywallPage() {
 
   const trialEnded = school?.trial_ends_at ? new Date(school.trial_ends_at) <= new Date() : false;
 
-  const choosePlan = async (planId: string, slug: string) => {
-    setSelectedPlan(slug);
+  const choosePlan = async (plan: Plan) => {
+    if (!school || !profile) return;
+    setSelectedPlan(plan.slug);
     setLoading(true);
     setError(null);
-    const { error } = await supabase.from('schools').update({ plan_id: planId, subscription_status: 'active' }).eq('id', school!.id);
-    setLoading(false);
-    if (error) { setError(error.message); return; }
-    await refresh();
-    window.location.href = '/dashboard';
+    await payForPlan({
+      school: { id: school.id, name: school.name, email: school.email },
+      profile: { email: profile.email, first_name: profile.first_name, last_name: profile.last_name, phone: profile.phone },
+      plan: { id: plan.id, name: plan.name, price_monthly: plan.price_monthly },
+      billingPeriod: 'monthly',
+      amount: plan.price_monthly,
+      currency: 'USD',
+      onSuccess: async () => {
+        setLoading(false);
+        await refresh();
+        window.location.href = '/dashboard';
+      },
+      onError: (message) => { setLoading(false); setError(message); },
+      onClose: () => { setLoading(false); },
+    });
   };
 
   return (
@@ -79,7 +91,7 @@ export function PaywallPage() {
                 <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">{p.name}</h3>
                 <div className="mt-2 flex items-baseline gap-1"><span className="font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">${p.price_monthly.toFixed(0)}</span><span className="text-sm text-slate-500 dark:text-slate-400">/mois</span></div>
                 <ul className="mt-4 space-y-2 flex-1">{(p.features || []).map((m) => (<li key={m} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400"><Check size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" /><span>{m}</span></li>))}</ul>
-                <button onClick={() => choosePlan(p.id, p.slug)} disabled={loading && selectedPlan === p.slug} className={`mt-5 w-full text-center text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors inline-flex items-center justify-center gap-2 ${popular ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} disabled:opacity-60`}>
+                <button onClick={() => choosePlan(p)} disabled={loading && selectedPlan === p.slug} className={`mt-5 w-full text-center text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors inline-flex items-center justify-center gap-2 ${popular ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} disabled:opacity-60`}>
                   {loading && selectedPlan === p.slug && <Loader2 size={14} className="animate-spin" />} Choisir {p.name}
                 </button>
               </div>
