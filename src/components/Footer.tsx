@@ -37,7 +37,8 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
           <div>
             <h4 className="text-sm font-semibold text-white mb-3">{t('footer.contact')}</h4>
             <ul className="space-y-2 text-sm">
-              <li>hello@klaso.com</li>
+              <li>support@liafrik.com</li>
+              <li>cs@liafrik.com</li>
               <li>Yaoundé · Dubaï</li>
             </ul>
           </div>

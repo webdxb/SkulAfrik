@@ -86,25 +86,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadProfile(session.user).finally(() => setLoading(false));
+        loadProfile(session.user).finally(() => { if (mounted) setLoading(false); });
       } else {
         setLoading(false);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
+      // A session change (sign-in, sign-up, token refresh) must keep the app in a
+      // loading state until the profile is (re)fetched — otherwise the router can
+      // briefly render <Dashboard /> with profile still null, before onboarding
+      // status is known, letting some accounts slip straight past onboarding.
+      setLoading(true);
       if (session?.user) {
-        (async () => { await loadProfile(session.user); })();
+        loadProfile(session.user).finally(() => { if (mounted) setLoading(false); });
       } else {
-        loadProfile(null);
+        loadProfile(null).finally(() => { if (mounted) setLoading(false); });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
 
   const signOut = async () => {

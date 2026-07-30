@@ -13,6 +13,8 @@ import { SuperAdminApp } from './pages/SuperAdminApp';
 import { AccessDenied } from './pages/AccessDenied';
 import { ParentJoinPage } from './pages/ParentJoinPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 
 function Router() {
   const { user, profile, isSuperAdmin, subscriptionActive, loading } = useAuth();
@@ -21,6 +23,10 @@ function Router() {
   useEffect(() => { window.scrollTo(0, 0); }, [path]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Chargement...</div>;
+
+  // Public legal pages — accessible whether logged in or not, before any other routing logic
+  if (path === '/privacy') return <PrivacyPage />;
+  if (path === '/terms') return <TermsPage />;
 
   if (!user) {
     if (path === '/login' || path === '/signup') return <LoginPage />;
