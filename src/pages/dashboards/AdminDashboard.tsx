@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/router';
 import { PageHeader, Card, EmptyState } from '../../components/ui';
+import { formatCurrency as formatCurrencyByCode, getCurrencyForCountryName } from '../../lib/countries';
 import {
   GraduationCap,
   Users,
@@ -40,10 +41,6 @@ const QUICK_LINKS = [
   { label: 'Bulletins', path: '/dashboard/bulletins', icon: FileText },
   { label: 'Calendrier', path: '/dashboard/calendar', icon: Calendar },
 ];
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value || 0);
-}
 
 function formatRelativeDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -101,6 +98,7 @@ export function AdminDashboard() {
   }
 
   const balance = (stats?.revenue || 0) - (stats?.expenses || 0);
+  const currency = getCurrencyForCountryName(school.country);
 
   return (
     <div>
@@ -132,7 +130,7 @@ export function AdminDashboard() {
         <StatCard
           icon={Wallet}
           label="Solde du mois"
-          value={loading ? '—' : formatCurrency(balance)}
+          value={loading ? '—' : formatCurrencyByCode(balance, currency)}
           color={balance >= 0 ? 'emerald' : 'rose'}
         />
       </div>
@@ -147,7 +145,7 @@ export function AdminDashboard() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Revenus du mois</span>
           </div>
           <p className="font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {loading ? '—' : formatCurrency(stats?.revenue || 0)}
+            {loading ? '—' : formatCurrencyByCode(stats?.revenue || 0, currency)}
           </p>
         </Card>
         <Card className="p-5">
@@ -158,7 +156,7 @@ export function AdminDashboard() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Dépenses du mois</span>
           </div>
           <p className="font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {loading ? '—' : formatCurrency(stats?.expenses || 0)}
+            {loading ? '—' : formatCurrencyByCode(stats?.expenses || 0, currency)}
           </p>
         </Card>
         <Card className="p-5">
@@ -169,7 +167,7 @@ export function AdminDashboard() {
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Solde net</span>
           </div>
           <p className={`font-heading text-2xl font-bold ${balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-            {loading ? '—' : formatCurrency(balance)}
+            {loading ? '—' : formatCurrencyByCode(balance, currency)}
           </p>
         </Card>
       </div>

@@ -17,8 +17,9 @@ interface Bulletin {
 interface Student { id: string; first_name: string; last_name: string; }
 
 export function BulletinsPage() {
-  const { school } = useAuth();
+  const { school, profile } = useAuth();
   const { showError } = useToast();
+  const canManage = profile?.role === 'admin' || profile?.role === 'teacher';
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [students, setStudents] = useState<Record<string, Student>>({});
   const [loading, setLoading] = useState(true);
@@ -93,9 +94,11 @@ export function BulletinsPage() {
   return (
     <div>
       <PageHeader title="Bulletins" subtitle="Générez et publiez les bulletins de notes" action={
-        <button onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
-          <FileText size={16} /> {generating ? 'Génération...' : 'Générer (T1)'}
-        </button>
+        canManage ? (
+          <button onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+            <FileText size={16} /> {generating ? 'Génération...' : 'Générer (T1)'}
+          </button>
+        ) : undefined
       } />
 
       <Card className="mb-4 p-4">
@@ -109,9 +112,11 @@ export function BulletinsPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Chargement...</p>
       ) : filtered.length === 0 ? (
         <EmptyState icon={Award} message="Aucun bulletin généré" action={
-          <button onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
-            <FileText size={16} /> Générer les bulletins
-          </button>
+          canManage ? (
+            <button onClick={handleGenerate} disabled={generating} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              <FileText size={16} /> Générer les bulletins
+            </button>
+          ) : undefined
         } />
       ) : (
         <Card className="overflow-x-auto">
@@ -141,7 +146,7 @@ export function BulletinsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {b.status !== 'published' && (
+                      {canManage && b.status !== 'published' && (
                         <button onClick={() => handlePublish(b.id)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
                           <Send size={14} /> Publier
                         </button>

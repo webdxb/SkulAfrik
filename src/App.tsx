@@ -5,12 +5,12 @@ import { I18nProvider } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
 import { OfflineBanner } from './lib/useOffline';
 import { ChatWidget } from './components/ChatWidget';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { Dashboard } from './pages/Dashboard';
-import { SuperAdminApp } from './pages/SuperAdminApp';
+const SuperAdminApp = lazy(() => import('./pages/SuperAdminApp').then((m) => ({ default: m.SuperAdminApp })));
 import { AccessDenied } from './pages/AccessDenied';
 import { ParentJoinPage } from './pages/ParentJoinPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -40,7 +40,7 @@ function Router() {
   if (path === '/reset-password') return <ResetPasswordPage />;
 
   // Super Admin — full access, no restrictions
-  if (isSuperAdmin) return <SuperAdminApp />;
+  if (isSuperAdmin) return <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Chargement...</div>}><SuperAdminApp /></Suspense>;
 
   // Onboarding not completed → force onboarding
   if (profile && !profile.onboarding_completed && path !== '/onboarding') {

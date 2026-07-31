@@ -17,7 +17,7 @@ const MODULES = [
   { path: 'attendance', label: 'Présences', icon: '✅', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'grades', label: 'Notes', icon: '📊', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'exams', label: 'Examens', icon: '📝', roles: ['admin', 'teacher'] },
-  { path: 'bulletins', label: 'Bulletins', icon: '📄', roles: ['admin', 'teacher', 'parent'] },
+  { path: 'bulletins', label: 'Bulletins', icon: '📄', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'discipline', label: 'Discipline', icon: '🚨', roles: ['admin', 'teacher'] },
   { path: 'calendar', label: 'Calendrier', icon: '📅', roles: ['admin', 'teacher', 'parent', 'student'] },
   { path: 'transport', label: 'Transport', icon: '🚌', roles: ['admin'] },

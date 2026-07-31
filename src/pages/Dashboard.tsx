@@ -1,38 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 import { payForPlan } from '../lib/flutterwave';
 import { useRoute, Link } from '../lib/router';
 import { DashboardShell } from '../components/DashboardShell';
-import { AdminDashboard } from './dashboards/AdminDashboard';
-import { TeacherDashboard } from './dashboards/TeacherDashboard';
-import { ParentDashboard } from './dashboards/ParentDashboard';
-import { StudentDashboard } from './dashboards/StudentDashboard';
+const AdminDashboard = lazy(() => import('./dashboards/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const TeacherDashboard = lazy(() => import('./dashboards/TeacherDashboard').then((m) => ({ default: m.TeacherDashboard })));
+const ParentDashboard = lazy(() => import('./dashboards/ParentDashboard').then((m) => ({ default: m.ParentDashboard })));
+const StudentDashboard = lazy(() => import('./dashboards/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
 
-// Module pages
-import { StudentsPage } from './modules/StudentsPage';
-import { ParentsPage } from './modules/ParentsPage';
-import { TeachersPage } from './modules/TeachersPage';
-import { StaffPage } from './modules/StaffPage';
-import { ClassesPage } from './modules/ClassesPage';
-import { SubjectsPage } from './modules/SubjectsPage';
-import { AttendancePage } from './modules/AttendancePage';
-import { GradesPage } from './modules/GradesPage';
-import { ExamsPage } from './modules/ExamsPage';
-import { BulletinsPage } from './modules/BulletinsPage';
-import { CalendarPage } from './modules/CalendarPage';
-import { TransportPage } from './modules/TransportPage';
-import { LibraryPage } from './modules/LibraryPage';
-import { AlumniPage } from './modules/AlumniPage';
-import { FinancesPage } from './modules/FinancesPage';
-import { AccountingPage } from './modules/AccountingPage';
-import { PayrollPage } from './modules/PayrollPage';
-import { ReportsPage } from './modules/ReportsPage';
-import { MessagesPage } from './modules/MessagesPage';
-import { SupportPage } from './modules/SupportPage';
-import { SettingsPage } from './modules/SettingsPage';
-import { DisciplinePage } from './modules/DisciplinePage';
+// Module pages — lazy-loaded so a parent's browser never has to download the
+// Payroll/Accounting/SuperAdmin-adjacent code it will never use, and vice versa.
+const StudentsPage = lazy(() => import('./modules/StudentsPage').then((m) => ({ default: m.StudentsPage })));
+const ParentsPage = lazy(() => import('./modules/ParentsPage').then((m) => ({ default: m.ParentsPage })));
+const TeachersPage = lazy(() => import('./modules/TeachersPage').then((m) => ({ default: m.TeachersPage })));
+const StaffPage = lazy(() => import('./modules/StaffPage').then((m) => ({ default: m.StaffPage })));
+const ClassesPage = lazy(() => import('./modules/ClassesPage').then((m) => ({ default: m.ClassesPage })));
+const SubjectsPage = lazy(() => import('./modules/SubjectsPage').then((m) => ({ default: m.SubjectsPage })));
+const AttendancePage = lazy(() => import('./modules/AttendancePage').then((m) => ({ default: m.AttendancePage })));
+const GradesPage = lazy(() => import('./modules/GradesPage').then((m) => ({ default: m.GradesPage })));
+const ExamsPage = lazy(() => import('./modules/ExamsPage').then((m) => ({ default: m.ExamsPage })));
+const BulletinsPage = lazy(() => import('./modules/BulletinsPage').then((m) => ({ default: m.BulletinsPage })));
+const CalendarPage = lazy(() => import('./modules/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const TransportPage = lazy(() => import('./modules/TransportPage').then((m) => ({ default: m.TransportPage })));
+const LibraryPage = lazy(() => import('./modules/LibraryPage').then((m) => ({ default: m.LibraryPage })));
+const AlumniPage = lazy(() => import('./modules/AlumniPage').then((m) => ({ default: m.AlumniPage })));
+const FinancesPage = lazy(() => import('./modules/FinancesPage').then((m) => ({ default: m.FinancesPage })));
+const AccountingPage = lazy(() => import('./modules/AccountingPage').then((m) => ({ default: m.AccountingPage })));
+const PayrollPage = lazy(() => import('./modules/PayrollPage').then((m) => ({ default: m.PayrollPage })));
+const ReportsPage = lazy(() => import('./modules/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const MessagesPage = lazy(() => import('./modules/MessagesPage').then((m) => ({ default: m.MessagesPage })));
+const SupportPage = lazy(() => import('./modules/SupportPage').then((m) => ({ default: m.SupportPage })));
+const SettingsPage = lazy(() => import('./modules/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const DisciplinePage = lazy(() => import('./modules/DisciplinePage').then((m) => ({ default: m.DisciplinePage })));
 
 export function Dashboard({ paywall }: { paywall?: boolean }) {
   const { profile } = useAuth();
@@ -64,7 +65,13 @@ export function Dashboard({ paywall }: { paywall?: boolean }) {
     return renderHome();
   };
 
-  return <DashboardShell paywall={paywall}>{renderPage()}</DashboardShell>;
+  return (
+    <DashboardShell paywall={paywall}>
+      <Suspense fallback={<div className="flex items-center justify-center py-20 text-sm text-slate-400">Chargement...</div>}>
+        {renderPage()}
+      </Suspense>
+    </DashboardShell>
+  );
 }
 
 function PricingPlaceholder() {
