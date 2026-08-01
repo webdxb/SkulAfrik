@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../lib/i18n';
 import { Logo } from '../components/Logo';
 import { Link, useRoute, navigate } from '../lib/router';
 import { LogOut, Building2, Users, CreditCard, BarChart3, Shield, Settings, Bell, Menu, X, MessageCircle } from 'lucide-react';
@@ -117,6 +118,7 @@ function OverviewSection() {
 }
 
 function SchoolsSection() {
+  const { locale } = useI18n();
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -146,7 +148,7 @@ function SchoolsSection() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.country || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.city || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.type || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{new Date(s.created_at).toLocaleDateString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatDate(s.created_at, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -292,6 +294,7 @@ function SalesCodesSection() {
 
 function StaffSection() { return <div className="space-y-5"><h1 className="font-heading text-2xl font-bold text-slate-900">Performance du staff</h1><p className="text-sm text-slate-500">Statistiques de performance du staff plateforme en cours de développement.</p></div>; }
 function AuditSection() {
+  const { locale } = useI18n();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -327,7 +330,7 @@ function AuditSection() {
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {logs.map((l) => (
                 <tr key={l.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(l.created_at).toLocaleString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDateTime(l.created_at, locale)}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{l.actor_email || '—'}</td>
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{l.action}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{l.target_type ? `${l.target_type}${l.target_id ? ` #${l.target_id}` : ''}` : '—'}</td>
@@ -428,6 +431,7 @@ interface ChatMsg { id: string; sender_type: string; content: string; created_at
 
 function LiveChatSection() {
   const { profile } = useAuth();
+  const { locale } = useI18n();
   const { showError } = useToast();
   const [conversations, setConversations] = useState<ChatConv[]>([]);
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
@@ -510,7 +514,7 @@ function LiveChatSection() {
             conversations.map((c) => (
               <button key={c.id} onClick={() => takeConversation(c.id)} className={`w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 ${activeId === c.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{userEmails[c.user_id] || c.user_id}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{new Date(c.updated_at).toLocaleString('fr-FR')}</p>
+                <p className="mt-0.5 text-xs text-slate-400">{formatDateTime(c.updated_at, locale)}</p>
                 <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${c.status === 'escalated' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
                   {c.status === 'escalated' ? "En attente d'agent" : 'Bot en cours'}
                 </span>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, EmptyState, Modal, inputCls, Card } from '../../components/ui';
 import { Send, Plus, MessageSquare, Search } from 'lucide-react';
 
@@ -22,6 +23,7 @@ interface Profile {
 }
 
 export function MessagesPage() {
+  const { locale } = useI18n();
   const { showError } = useToast();
   const { school, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -148,7 +150,7 @@ export function MessagesPage() {
                         </div>
                         <h3 className="mt-1 font-medium text-slate-900 dark:text-slate-100">{m.subject || '(Sans objet)'}</h3>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{m.body || ''}</p>
-                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{new Date(m.created_at).toLocaleString('fr-FR')}</p>
+                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{formatDateTime(m.created_at, locale)}</p>
                       </div>
                     </div>
                   </Card>
@@ -198,7 +200,7 @@ export function MessagesPage() {
           <div className="space-y-3">
             <p className="text-xs text-slate-400">
               {openMessage.sender_id === profile?.id ? `À: ${contacts[openMessage.recipient_id] || '—'}` : `De: ${contacts[openMessage.sender_id] || '—'}`}
-              {' · '}{new Date(openMessage.created_at).toLocaleString('fr-FR')}
+              {' · '}{formatDateTime(openMessage.created_at, locale)}
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{openMessage.body || ''}</p>
           </div>

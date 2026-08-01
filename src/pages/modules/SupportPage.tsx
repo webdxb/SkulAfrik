@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, EmptyState, inputCls, Card } from '../../components/ui';
 import { LifeBuoy, Plus, Send, Search } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface Ticket {
 }
 
 export function SupportPage() {
+  const { locale } = useI18n();
   const { showError } = useToast();
   const { school, profile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -167,7 +169,7 @@ export function SupportPage() {
                       </div>
                       <h3 className="font-medium text-slate-900 dark:text-slate-100">{t.subject}</h3>
                       {t.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t.description}</p>}
-                      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{new Date(t.created_at).toLocaleString('fr-FR')}</p>
+                      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{formatDateTime(t.created_at, locale)}</p>
                     </div>
                   </div>
                 </Card>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Trash2, ShieldAlert, Check } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const typeColors: Record<string, string> = {
 const severityLabels: Record<string, string> = { low: 'Basse', medium: 'Moyenne', high: 'Haute' };
 
 export function DisciplinePage() {
+  const { locale } = useI18n();
   const { showError, showSuccess } = useToast();
   const { school, profile } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -143,7 +145,7 @@ export function DisciplinePage() {
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{studentName(i.student_id)}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{new Date(i.incident_date).toLocaleDateString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatDate(i.incident_date, locale)}</td>
                   <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[i.type] || typeColors.warning}`}>{typeLabels[i.type] || i.type}</span></td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{i.severity ? severityLabels[i.severity] : '—'}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 max-w-xs truncate">{i.description || '—'}</td>

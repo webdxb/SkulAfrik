@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, BookOpen, BookUp, BookCheck } from 'lucide-react';
 
@@ -30,6 +31,7 @@ interface StudentOption { id: string; name: string; }
 const emptyForm = { title: '', author: '', isbn: '', category: '', copies_total: '', copies_available: '' };
 
 export function LibraryPage() {
+  const { locale } = useI18n();
   const { showError, showSuccess } = useToast();
   const { school } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
@@ -247,8 +249,8 @@ export function LibraryPage() {
                     <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{bookTitle(l.book_id)}</td>
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{studentName(l.borrower_id)}</td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{new Date(l.loan_date).toLocaleDateString('fr-FR')}</td>
-                      <td className={`px-4 py-3 ${overdue ? 'text-rose-600 dark:text-rose-400 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(l.due_date).toLocaleDateString('fr-FR')}{overdue ? ' (en retard)' : ''}</td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatDate(l.loan_date, locale)}</td>
+                      <td className={`px-4 py-3 ${overdue ? 'text-rose-600 dark:text-rose-400 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>{formatDate(l.due_date, locale)}{overdue ? ' (en retard)' : ''}</td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => handleReturn(l)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
                           <BookCheck size={14} /> Marquer retourné

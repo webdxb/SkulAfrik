@@ -270,3 +270,17 @@ export function useI18n() {
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
 }
+
+// Maps our app locale ('fr'/'en') to a real Intl locale for date formatting,
+// so a user who picked English doesn't see French-formatted (DD/MM) dates.
+export function toIntlLocale(locale: Locale): string {
+  return locale === 'en' ? 'en-US' : 'fr-FR';
+}
+
+export function formatDate(date: string | Date, locale: Locale): string {
+  return new Date(date).toLocaleDateString(toIntlLocale(locale));
+}
+
+export function formatDateTime(date: string | Date, locale: Locale): string {
+  return new Date(date).toLocaleString(toIntlLocale(locale));
+}

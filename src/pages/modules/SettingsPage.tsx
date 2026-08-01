@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, Modal, inputCls, Card } from '../../components/ui';
 import { Settings, Plus, Trash2, Shield, Check, X, CreditCard } from 'lucide-react';
 
@@ -37,6 +38,7 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 export function SettingsPage() {
+  const { locale } = useI18n();
   const { showError } = useToast();
   const { school, profile, refresh } = useAuth();
   const [schoolForm, setSchoolForm] = useState({ name: '', country: '', city: '', phone: '', email: '', address: '' });
@@ -215,7 +217,7 @@ export function SettingsPage() {
           </div>
           <div>
             <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Fin d'essai</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{school?.trial_ends_at ? new Date(school.trial_ends_at).toLocaleDateString('fr-FR') : '—'}</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{school?.trial_ends_at ? formatDate(school.trial_ends_at, locale) : '—'}</p>
           </div>
         </div>
       </Card>

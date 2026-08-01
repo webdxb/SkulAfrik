@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { useI18n, formatDate, formatDateTime } from '../../lib/i18n';
 import { PageHeader, Modal, EmptyState, inputCls, Card } from '../../components/ui';
 import { Plus, Search, Pencil, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
@@ -17,6 +18,7 @@ interface CalendarEvent {
 const emptyForm = { title: '', description: '', event_type: 'event', start_time: '', end_time: '' };
 
 export function CalendarPage() {
+  const { locale } = useI18n();
   const { showError } = useToast();
   const { school, profile } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -152,8 +154,8 @@ export function CalendarPage() {
                   </div>
                   {e.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{e.description}</p>}
                   <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="inline-flex items-center gap-1"><Clock size={14} /> {new Date(e.start_at).toLocaleString('fr-FR')}</span>
-                    {e.end_at && <span className="inline-flex items-center gap-1"><Clock size={14} /> → {new Date(e.end_at).toLocaleString('fr-FR')}</span>}
+                    <span className="inline-flex items-center gap-1"><Clock size={14} /> {formatDateTime(e.start_at, locale)}</span>
+                    {e.end_at && <span className="inline-flex items-center gap-1"><Clock size={14} /> → {formatDateTime(e.end_at, locale)}</span>}
                   </div>
                 </div>
                 <div className="inline-flex gap-2">
