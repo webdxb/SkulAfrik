@@ -2,25 +2,22 @@
 
 // Service Worker for KLASO — offline-first caching
 // Strategy:
-//   - App shell (HTML/JS/CSS): stale-while-revalidate → instant load offline
+//   - Navigation (HTML): network-first → always get the latest deployed app shell
+//     when online; only fall back to cache if truly offline. This is critical
+//     because Vite's hashed JS/CSS filenames change on every deploy — serving a
+//     stale cached index.html would keep pointing at assets that may no longer
+//     exist, and would make the app appear "frozen" on an old version forever.
+//   - Hashed JS/CSS/fonts (content-addressed, safe to cache forever): cache-first
 //   - API/Supabase: network-first, fallback to cache
 //   - Images: cache-first
 
-const CACHE_VERSION = 'klaso-v1';
+const CACHE_VERSION = 'klaso-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMG_CACHE = `${CACHE_VERSION}-img`;
 
-const SHELL_ASSETS = [
-  '/',
-  '/index.html',
-  '/ChatGPT_Image_Jul_15,_2026,_07_58_18_PM.jpg',
-];
-
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ASSETS)).then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
@@ -78,18 +75,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App shell (HTML/JS/CSS) → stale-while-revalidate
-  if (req.mode === 'navigate' || req.destination === 'script' || req.destination === 'style' || req.destination === 'font') {
+  // Navigation requests (the HTML shell) → network-first. This is THE critical
+  // fix: always fetch the latest deployed index.html when online, so the app
+  // never appears "stuck" on an old version after a new deploy.
+  if (req.mode === 'navigate') {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        const fetchPromise = fetch(req).then((res) => {
+      fetch(req)
+        .then((res) => {
           if (res.ok) {
             const clone = res.clone();
             caches.open(SHELL_CACHE).then((cache) => cache.put(req, clone));
           }
           return res;
-        }).catch(() => cached);
-        return cached || fetchPromise;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Hashed JS/CSS/fonts (content-addressed by Vite — safe to cache forever) → cache-first
+  if (req.destination === 'script' || req.destination === 'style' || req.destination === 'font') {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(req, clone));
+          }
+          return res;
+        });
       })
     );
     return;

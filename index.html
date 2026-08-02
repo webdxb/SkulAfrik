@@ -18,7 +18,19 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            // Check for a newer service worker on every load, and reload the
+            // page automatically once it takes control — otherwise a visitor
+            // could stay stuck on an old cached version indefinitely after a
+            // new deploy, even though the server already has the latest code.
+            reg.update().catch(() => {});
+            let refreshed = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (refreshed) return;
+              refreshed = true;
+              window.location.reload();
+            });
+          }).catch(() => {});
         });
       }
     </script>
