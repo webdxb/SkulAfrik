@@ -10,7 +10,6 @@ export interface Profile {
   role: string;
   school_id: string | null;
   custom_role_id: string | null;
-  sales_code: string | null;
   onboarding_completed: boolean;
 }
 
@@ -62,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const superAdmin = !!sa;
     setIsSuperAdmin(superAdmin);
     if (superAdmin) {
-      setProfile({ id: u.id, email: u.email, first_name: null, last_name: null, phone: null, role: 'super_admin', school_id: null, custom_role_id: null, sales_code: null, onboarding_completed: true });
+      setProfile({ id: u.id, email: u.email, first_name: null, last_name: null, phone: null, role: 'super_admin', school_id: null, custom_role_id: null, onboarding_completed: true });
       setSchool(null);
       setSubscriptionActive(true);
       setPlanModules(null);
