@@ -98,7 +98,7 @@ export function AdminDashboard() {
   }
 
   const balance = (stats?.revenue || 0) - (stats?.expenses || 0);
-  const currency = getCurrencyForCountryName(school.country);
+  const currency = school.currency || getCurrencyForCountryName(school.country);
 
   return (
     <div>

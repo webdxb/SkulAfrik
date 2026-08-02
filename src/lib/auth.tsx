@@ -19,6 +19,7 @@ export interface School {
   country: string | null;
   city: string | null;
   type: string;
+  currency: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;

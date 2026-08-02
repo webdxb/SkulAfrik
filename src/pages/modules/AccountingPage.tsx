@@ -16,7 +16,7 @@ interface Transaction {
 
 export function AccountingPage() {
   const { school } = useAuth();
-  const currency = getCurrencyForCountryName(school?.country);
+  const currency = school?.currency || getCurrencyForCountryName(school?.country);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 

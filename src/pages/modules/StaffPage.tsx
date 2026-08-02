@@ -20,7 +20,7 @@ const emptyForm = { first_name: '', last_name: '', role: '', phone: '', salary_b
 export function StaffPage() {
   const { showError } = useToast();
   const { school } = useAuth();
-  const currency = getCurrencyForCountryName(school?.country);
+  const currency = school?.currency || getCurrencyForCountryName(school?.country);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

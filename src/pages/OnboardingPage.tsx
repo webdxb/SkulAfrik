@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { navigate } from '../lib/router';
-import { countries } from '../lib/countries';
+import { countries, getCurrencyForCountryName } from '../lib/countries';
 import { Logo } from '../components/Logo';
 import { Building2, User, GraduationCap, BookOpen, Check, ArrowRight, ArrowLeft } from 'lucide-react';
 
@@ -67,6 +67,7 @@ export function OnboardingPage() {
       // and plan/trial fields live directly on the schools row (there is no separate "subscriptions" table).
       const { data: school, error: schErr } = await supabase.from('schools').insert({
         name: schoolName, legal_name: schoolName, country, city, type: schoolType,
+        currency: getCurrencyForCountryName(country),
         owner_user_id: user!.id,
         plan_id: planId, subscription_status: 'trial', sales_code_id: salesCodeId,
         trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),

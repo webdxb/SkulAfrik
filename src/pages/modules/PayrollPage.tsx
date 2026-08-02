@@ -32,7 +32,7 @@ const emptyForm = { staff_id: '', month: new Date().toISOString().slice(0, 7), b
 export function PayrollPage() {
   const { showError } = useToast();
   const { school, profile } = useAuth();
-  const currency = getCurrencyForCountryName(school?.country);
+  const currency = school?.currency || getCurrencyForCountryName(school?.country);
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [items, setItems] = useState<PayrollItem[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
