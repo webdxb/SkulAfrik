@@ -21,9 +21,6 @@ export function ChatWidget() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Don't show the widget until we know who's asking — avoids a flash on the public landing page.
-  if (!user || !profile) return null;
-
   useEffect(() => {
     if (open && !conversationId) initConversation();
   }, [open]);
@@ -45,6 +42,11 @@ export function ChatWidget() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  // Don't show the widget until we know who's asking — avoids a flash on the public landing page.
+  // IMPORTANT: this must come AFTER every hook above (React rules of hooks — hook
+  // order must never change between renders, so an early return can't sit between them).
+  if (!user || !profile) return null;
 
   async function initConversation() {
     setLoadingHistory(true);
