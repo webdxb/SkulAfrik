@@ -25,17 +25,17 @@ export function PrivacyPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">1. Qui nous sommes</h2>
             <p>
-              KLASO est une plateforme internationale de gestion scolaire multi-établissements, développée et exploitée par <strong>LiAfrik</strong>,
+              KLASOO est une plateforme internationale de gestion scolaire multi-établissements, développée et exploitée par <strong>LiAfrik</strong>,
               société ayant des bureaux à Yaoundé (Cameroun) et Dubaï (Émirats arabes unis). Cette politique décrit comment nous collectons,
               utilisons, protégeons et partageons les informations lorsque votre établissement scolaire, ou vous-même en tant qu'administrateur,
-              enseignant, parent ou élève, utilisez KLASO.
+              enseignant, parent ou élève, utilisez KLASOO.
             </p>
           </section>
 
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">2. Rôle de chacun : responsable de traitement vs sous-traitant</h2>
             <p>
-              Pour les données des élèves et de leur famille saisies dans KLASO par un établissement scolaire, <strong>l'établissement scolaire est responsable
+              Pour les données des élèves et de leur famille saisies dans KLASOO par un établissement scolaire, <strong>l'établissement scolaire est responsable
               du traitement</strong> de ces données ; LiAfrik agit en tant que <strong>sous-traitant</strong>, traitant les données uniquement sur instruction
               de l'établissement et pour les seules finalités de fourniture du service. Pour les données que nous collectons directement
               (ex. : compte de facturation de l'établissement, données de navigation sur notre site), LiAfrik est responsable du traitement.
@@ -47,7 +47,7 @@ export function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-1.5">
               <li><strong>Données de compte</strong> : nom, prénom, email, téléphone, rôle (administrateur, enseignant, parent, élève).</li>
               <li><strong>Données scolaires</strong> : inscriptions, notes, présences, bulletins, incidents disciplinaires, données financières liées à la scolarité.</li>
-              <li><strong>Données de facturation</strong> de l'établissement (plan choisi, historique de paiement) — jamais les données bancaires des parents ou élèves, qui ne paient rien directement sur KLASO.</li>
+              <li><strong>Données de facturation</strong> de l'établissement (plan choisi, historique de paiement) — jamais les données bancaires des parents ou élèves, qui ne paient rien directement sur KLASOO.</li>
               <li><strong>Données techniques</strong> : adresse IP, type d'appareil, journaux de connexion, cookies (voir notre politique de cookies, gérable directement depuis le site).</li>
             </ul>
           </section>
@@ -55,7 +55,7 @@ export function PrivacyPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">4. Données concernant les mineurs</h2>
             <p>
-              KLASO traite des données concernant des élèves mineurs. Ces données sont saisies par l'établissement scolaire ou les parents/tuteurs
+              KLASOO traite des données concernant des élèves mineurs. Ces données sont saisies par l'établissement scolaire ou les parents/tuteurs
               légaux, dans le cadre de la relation éducative. Nous ne collectons pas sciemment de données directement auprès d'un enfant en dehors
               de ce cadre scolaire encadré. Les parents disposent d'un droit d'accès aux données de leur enfant via leur propre compte, et peuvent
               exercer les droits décrits à la section 7 en s'adressant à l'établissement scolaire ou directement à nous.
@@ -65,7 +65,7 @@ export function PrivacyPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">5. Base légale et cadres applicables</h2>
             <p>
-              Selon le pays de l'établissement scolaire, KLASO s'efforce de respecter les cadres de protection des données applicables, notamment
+              Selon le pays de l'établissement scolaire, KLASOO s'efforce de respecter les cadres de protection des données applicables, notamment
               le Règlement général sur la protection des données (RGPD) pour les établissements situés dans l'Union européenne ou traitant des
               données de résidents européens, ainsi que les lois nationales de protection des données en vigueur dans les pays où nos clients
               sont établis. Le traitement repose selon les cas sur l'exécution du contrat conclu avec l'établissement, le consentement, ou l'intérêt
@@ -114,7 +114,7 @@ export function PrivacyPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">10. Transferts internationaux</h2>
             <p>
-              KLASO étant une plateforme internationale, vos données peuvent être hébergées ou traitées dans un pays différent du vôtre. Nous
+              KLASOO étant une plateforme internationale, vos données peuvent être hébergées ou traitées dans un pays différent du vôtre. Nous
               nous efforçons d'assurer un niveau de protection équivalent à celui exigé dans votre juridiction lors de tout transfert
               international de données.
             </p>
@@ -138,7 +138,7 @@ export function PrivacyPage() {
         </div>
       </main>
 
-      <Footer onManageCookies={() => { localStorage.removeItem('klaso_cookie_choice'); window.location.reload(); }} />
+      <Footer onManageCookies={() => { localStorage.removeItem('klasoo_cookie_choice'); window.location.reload(); }} />
     </div>
   );
 }

@@ -421,7 +421,7 @@ function SettingsSection() {
   return (
     <div className="space-y-5">
       <h1 className="font-heading text-2xl font-bold text-slate-900">Paramètres plateforme</h1>
-      <p className="text-sm text-slate-500">Configuration globale de la plateforme Klaso.</p>
+      <p className="text-sm text-slate-500">Configuration globale de la plateforme Klasoo.</p>
     </div>
   );
 }

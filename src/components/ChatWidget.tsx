@@ -82,7 +82,7 @@ export function ChatWidget() {
 
     if (!msgs || msgs.length === 0) {
       // Greet first-time visitors.
-      const greeting = `Bonjour ${profile?.first_name || ''} 👋 Je suis l'assistant Klaso. Posez-moi votre question, ou demandez à parler à un agent humain à tout moment.`;
+      const greeting = `Bonjour ${profile?.first_name || ''} 👋 Je suis l'assistant Klasoo. Posez-moi votre question, ou demandez à parler à un agent humain à tout moment.`;
       const { data: greetMsg } = await supabase
         .from('chat_messages')
         .insert({ conversation_id: convId, sender_type: 'bot', content: greeting })
@@ -125,7 +125,7 @@ export function ChatWidget() {
         <div className="fixed bottom-20 right-4 sm:right-6 z-[90] w-[calc(100vw-2rem)] sm:w-96 h-[28rem] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
           <div className="bg-[#003087] px-4 py-3 flex items-center justify-between text-white flex-shrink-0">
             <div>
-              <p className="font-heading text-sm font-bold">Support Klaso</p>
+              <p className="font-heading text-sm font-bold">Support Klasoo</p>
               <p className="text-[11px] text-[#B8D4F0]">{status === 'escalated' ? 'Un agent va vous répondre' : 'Assistant automatique'}</p>
             </div>
             <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white"><X size={18} /></button>

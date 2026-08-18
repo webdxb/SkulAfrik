@@ -70,7 +70,7 @@ export function OnboardingPage() {
         currency: getCurrencyForCountryName(country),
         owner_user_id: user!.id,
         plan_id: planId, subscription_status: 'trial', sales_code_id: salesCodeId,
-        trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+        trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
       }).select().single();
       if (schErr) throw schErr;
 
@@ -147,7 +147,7 @@ export function OnboardingPage() {
       <div className="mx-auto max-w-2xl">
         <div className="text-center mb-8">
           <Logo height={48} />
-          <h1 className="mt-6 font-heading text-2xl font-bold text-slate-900">Bienvenue sur Klaso</h1>
+          <h1 className="mt-6 font-heading text-2xl font-bold text-slate-900">Bienvenue sur Klasoo</h1>
           <p className="mt-2 text-sm text-slate-500">Configurons votre compte en quelques étapes.</p>
         </div>
 
@@ -198,7 +198,7 @@ export function OnboardingPage() {
                       <option key={p.id} value={p.id}>{p.name} — ${p.price_monthly.toFixed(0)}/mois</option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-slate-400">Essai gratuit de 7 jours. Aucune carte requise.</p>
+                  <p className="mt-1 text-xs text-slate-400">Essai gratuit de 14 jours. Aucune carte requise.</p>
                 </div>
               </div>
             )}

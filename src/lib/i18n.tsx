@@ -13,7 +13,7 @@ const fr: Dict = {
   'nav.dashboard': 'Tableau de bord',
   'hero.badge': 'Plateforme internationale de gestion scolaire',
   'hero.title': 'Toute votre école, un seul système.',
-  'hero.subtitle': 'KLASO connecte administrateurs, enseignants, parents et élèves dans une plateforme unique, pensée pour toutes les écoles, partout dans le monde.',
+  'hero.subtitle': 'KLASOO connecte administrateurs, enseignants, parents et élèves dans une plateforme unique, pensée pour toutes les écoles, partout dans le monde.',
   'hero.cta.primary': 'Démarrer l\'essai gratuit',
   'hero.cta.secondary': 'Voir les tarifs',
   'hero.stat.schools': 'Écoles',
@@ -32,7 +32,7 @@ const fr: Dict = {
   'features.title': 'Tout ce dont votre établissement a besoin',
   'features.subtitle': 'Des modules complets, connectés et sécurisés.',
   'pricing.title': 'Des forfaits clairs pour chaque taille d\'établissement',
-  'pricing.subtitle': '7 jours d\'essai gratuit. Sans engagement. Annulez quand vous voulez.',
+  'pricing.subtitle': '14 jours d\'essai gratuit. Sans engagement. Annulez quand vous voulez.',
   'pricing.monthly': 'Mensuel',
   'pricing.annual': 'Annuel',
   'pricing.save': 'Économisez 20%',
@@ -58,10 +58,10 @@ const fr: Dict = {
   'cookies.necessary': 'Nécessaires',
   'cookies.analytics': 'Analytiques',
   'cookies.marketing': 'Marketing',
-  'auth.login.title': 'Connexion à KLASO',
+  'auth.login.title': 'Connexion à KLASOO',
   'auth.login.subtitle': 'Bienvenue. Connectez-vous pour accéder à votre espace.',
   'auth.signup.title': 'Créer votre compte',
-  'auth.signup.subtitle': 'Démarrez votre essai gratuit de 7 jours.',
+  'auth.signup.subtitle': 'Démarrez votre essai gratuit de 14 jours.',
   'auth.email': 'Adresse email',
   'auth.password': 'Mot de passe',
   'auth.firstname': 'Prénom',
@@ -115,7 +115,7 @@ const fr: Dict = {
   'features.f6.title': 'Cloisonnement par établissement',
   'features.f6.desc': 'Chaque école est isolée. Vos données ne sont visibles que par vous.',
   'cta.final.title': 'Prêt à digitaliser votre établissement ?',
-  'cta.final.subtitle': 'Essai gratuit de 7 jours. Aucune carte requise.',
+  'cta.final.subtitle': 'Essai gratuit de 14 jours. Aucune carte requise.',
   'cta.final.button': 'Créer mon compte',
 };
 
@@ -128,7 +128,7 @@ const en: Dict = {
   'nav.dashboard': 'Dashboard',
   'hero.badge': 'International school management platform',
   'hero.title': 'Your entire school, one system.',
-  'hero.subtitle': 'KLASO connects administrators, teachers, parents and students in a single platform built for schools everywhere in the world.',
+  'hero.subtitle': 'KLASOO connects administrators, teachers, parents and students in a single platform built for schools everywhere in the world.',
   'hero.cta.primary': 'Start free trial',
   'hero.cta.secondary': 'See pricing',
   'hero.stat.schools': 'Schools',
@@ -147,7 +147,7 @@ const en: Dict = {
   'features.title': 'Everything your school needs',
   'features.subtitle': 'Complete, connected and secure modules.',
   'pricing.title': 'Clear plans for every school size',
-  'pricing.subtitle': '7-day free trial. No commitment. Cancel anytime.',
+  'pricing.subtitle': '14-day free trial. No commitment. Cancel anytime.',
   'pricing.monthly': 'Monthly',
   'pricing.annual': 'Annual',
   'pricing.save': 'Save 20%',
@@ -173,10 +173,10 @@ const en: Dict = {
   'cookies.necessary': 'Necessary',
   'cookies.analytics': 'Analytics',
   'cookies.marketing': 'Marketing',
-  'auth.login.title': 'Sign in to KLASO',
+  'auth.login.title': 'Sign in to KLASOO',
   'auth.login.subtitle': 'Welcome back. Sign in to access your space.',
   'auth.signup.title': 'Create your account',
-  'auth.signup.subtitle': 'Start your 7-day free trial.',
+  'auth.signup.subtitle': 'Start your 14-day free trial.',
   'auth.email': 'Email address',
   'auth.password': 'Password',
   'auth.firstname': 'First name',
@@ -230,7 +230,7 @@ const en: Dict = {
   'features.f6.title': 'Per-school isolation',
   'features.f6.desc': 'Every school is sandboxed. Your data is visible to you alone.',
   'cta.final.title': 'Ready to digitize your school?',
-  'cta.final.subtitle': '7-day free trial. No card required.',
+  'cta.final.subtitle': '14-day free trial. No card required.',
   'cta.final.button': 'Create my account',
 };
 
@@ -246,12 +246,12 @@ const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('klaso_locale') : null;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('klasoo_locale') : null;
     return (stored as Locale) || 'fr';
   });
 
   useEffect(() => {
-    localStorage.setItem('klaso_locale', locale);
+    localStorage.setItem('klasoo_locale', locale);
     document.documentElement.lang = locale;
   }, [locale]);
 

@@ -53,7 +53,7 @@ export async function payForPlan({ school, profile, plan, billingPeriod, amount,
     return;
   }
 
-  const tx_ref = `klaso-${school.id.slice(0, 8)}-${Date.now()}`;
+  const tx_ref = `klasoo-${school.id.slice(0, 8)}-${Date.now()}`;
 
   // Create the pending record first — only the edge function (service role)
   // will ever be able to flip this to 'successful' and activate the plan.
@@ -80,7 +80,7 @@ export async function payForPlan({ school, profile, plan, billingPeriod, amount,
       name: [profile.first_name, profile.last_name].filter(Boolean).join(' ') || school.name,
     },
     customizations: {
-      title: 'Klaso',
+      title: 'Klasoo',
       description: `Abonnement ${plan.name} (${billingPeriod === 'annual' ? 'annuel' : 'mensuel'}) — ${school.name}`,
       logo: `${window.location.origin}/icon.jpg`,
     },

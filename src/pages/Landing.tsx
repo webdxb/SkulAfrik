@@ -31,7 +31,7 @@ export function LandingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [annual, setAnnual] = useState(false);
   const manageCookies = () => {
-    localStorage.removeItem('klaso_cookie_choice');
+    localStorage.removeItem('klasoo_cookie_choice');
     setCookieBannerKey((k) => k + 1);
   };
 
@@ -111,7 +111,7 @@ export function LandingPage() {
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-                <span className="ml-3 text-xs text-slate-400 font-mono">klaso.com/dashboard</span>
+                <span className="ml-3 text-xs text-slate-400 font-mono">klasoo.com/dashboard</span>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-3 gap-3">

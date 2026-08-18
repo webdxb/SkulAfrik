@@ -186,7 +186,7 @@ export function TeachersPage() {
         <Modal title="Inviter un enseignant" onClose={() => setInviteModalOpen(false)}>
           <div className="space-y-4">
             <p className="text-sm text-slate-500">
-              Un code unique sera généré. Transmettez-le à l'enseignant : il devra le saisir lors de son inscription sur Klaso pour rejoindre votre établissement.
+              Un code unique sera généré. Transmettez-le à l'enseignant : il devra le saisir lors de son inscription sur Klasoo pour rejoindre votre établissement.
             </p>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Repère (optionnel, ex: nom de l'enseignant)</label>

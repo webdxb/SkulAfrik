@@ -25,8 +25,8 @@ export function TermsPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">1. Acceptation des conditions</h2>
             <p>
-              En créant un compte ou en utilisant KLASO, vous acceptez les présentes Conditions d'utilisation. KLASO est édité et exploité par
-              <strong> LiAfrik</strong>, société ayant des bureaux à Yaoundé (Cameroun) et Dubaï (Émirats arabes unis). Si vous utilisez KLASO au
+              En créant un compte ou en utilisant KLASOO, vous acceptez les présentes Conditions d'utilisation. KLASOO est édité et exploité par
+              <strong> LiAfrik</strong>, société ayant des bureaux à Yaoundé (Cameroun) et Dubaï (Émirats arabes unis). Si vous utilisez KLASOO au
               nom d'un établissement scolaire, vous garantissez disposer de l'autorité nécessaire pour engager cet établissement.
             </p>
           </section>
@@ -34,7 +34,7 @@ export function TermsPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">2. Description du service</h2>
             <p>
-              KLASO est une plateforme SaaS multi-tenant de gestion scolaire : gestion des élèves, du personnel, des notes, des présences, de la
+              KLASOO est une plateforme SaaS multi-tenant de gestion scolaire : gestion des élèves, du personnel, des notes, des présences, de la
               facturation scolaire, de la communication entre l'établissement, les enseignants, les parents et les élèves, et des modules
               additionnels selon le plan souscrit.
             </p>
@@ -53,7 +53,7 @@ export function TermsPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">4. Abonnement, essai et facturation</h2>
             <p>
-              Un nouvel établissement bénéficie d'un essai gratuit de 7 jours donnant accès à l'ensemble des modules, sans carte bancaire requise.
+              Un nouvel établissement bénéficie d'un essai gratuit de 14 jours donnant accès à l'ensemble des modules, sans carte bancaire requise.
               À l'issue de l'essai, l'accès aux modules est déterminé par le plan souscrit par l'établissement. Les tarifs affichés sont indicatifs
               et peuvent varier selon la devise et le mode de facturation (mensuel ou annuel) choisis.
             </p>
@@ -72,10 +72,10 @@ export function TermsPage() {
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">6. Utilisation acceptable</h2>
             <p>Vous vous engagez à ne pas :</p>
             <ul className="list-disc pl-5 space-y-1.5 mt-2">
-              <li>Utiliser KLASO à des fins illégales ou pour porter atteinte aux droits d'autrui ;</li>
+              <li>Utiliser KLASOO à des fins illégales ou pour porter atteinte aux droits d'autrui ;</li>
               <li>Tenter d'accéder à des données d'un autre établissement scolaire que le vôtre ;</li>
               <li>Perturber le fonctionnement technique de la plateforme (intrusion, surcharge délibérée, ingénierie inverse) ;</li>
-              <li>Revendre ou sous-licencier l'accès à KLASO sans accord écrit préalable de LiAfrik.</li>
+              <li>Revendre ou sous-licencier l'accès à KLASOO sans accord écrit préalable de LiAfrik.</li>
             </ul>
           </section>
 
@@ -100,7 +100,7 @@ export function TermsPage() {
           <section>
             <h2 className="font-heading text-lg font-bold text-slate-900 mb-3">9. Limitation de responsabilité</h2>
             <p>
-              KLASO est fourni « en l'état ». Dans la limite permise par la loi applicable, LiAfrik ne saurait être tenu responsable des
+              KLASOO est fourni « en l'état ». Dans la limite permise par la loi applicable, LiAfrik ne saurait être tenu responsable des
               dommages indirects résultant de l'utilisation ou de l'impossibilité d'utiliser le service, y compris la perte de données non
               imputable à une faute de LiAfrik.
             </p>
@@ -133,7 +133,7 @@ export function TermsPage() {
         </div>
       </main>
 
-      <Footer onManageCookies={() => { localStorage.removeItem('klaso_cookie_choice'); window.location.reload(); }} />
+      <Footer onManageCookies={() => { localStorage.removeItem('klasoo_cookie_choice'); window.location.reload(); }} />
     </div>
   );
 }

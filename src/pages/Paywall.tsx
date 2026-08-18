@@ -71,7 +71,7 @@ export function PaywallPage() {
           {trialEnded ? (
             <>
               <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30 mb-4"><Lock size={26} className="text-rose-600 dark:text-rose-400" /></div>
-              <h1 className="font-heading text-3xl font-bold text-slate-900 dark:text-slate-100">Votre essai de 7 jours est terminé</h1>
+              <h1 className="font-heading text-3xl font-bold text-slate-900 dark:text-slate-100">Votre essai de 14 jours est terminé</h1>
               <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-xl mx-auto">Choisissez un plan pour continuer à accéder à vos données. Aucune donnée n'a été perdue — elles redeviennent accessibles dès le paiement effectué.</p>
             </>
           ) : (

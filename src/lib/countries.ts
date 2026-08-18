@@ -167,7 +167,7 @@ export const countries: Country[] = [
     regions: ['Anse aux Pins','Anse Boileau','Anse Etoile','Anse Royale','Au Cap','Baie Lazare','Beau Vallon','Bel Omb','Bel Air','Cascade','Glacis','Grand Anse Mahé','Grand Anse Praslin','Inner Islands','Les Mamelles','Mont Buxton','Mont Fleuri','Plaisance','Pointe La Rue','Roche Caiman','Saint Louis','Takamaka','Outer Islands'],
     cities: ['Victoria','Anse Royale','Beau Vallon','Cascade','Takamaka','Anse Boileau','Baie Lazare','Au Cap','Glacis','Pralin'] },
 
-  // International — Klaso is a genuinely global, multi-tenant platform, not limited to Africa.
+  // International — Klasoo is a genuinely global, multi-tenant platform, not limited to Africa.
   { code: 'FR', name: 'France', nameFr: 'France', currency: 'EUR', phonePrefix: '+33', timezone: 'Europe/Paris',
     regions: ['Île-de-France','Auvergne-Rhône-Alpes','Nouvelle-Aquitaine','Occitanie','Hauts-de-France','Grand Est','Provence-Alpes-Côte d\'Azur'],
     cities: ['Paris','Marseille','Lyon','Toulouse','Nice','Nantes','Strasbourg','Montpellier','Bordeaux','Lille'] },

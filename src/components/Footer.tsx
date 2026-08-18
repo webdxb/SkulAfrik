@@ -44,7 +44,7 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
           </div>
         </div>
         <div className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-3">
-          <span>© {new Date().getFullYear()} KLASO. {t('footer.rights')}</span>
+          <span>© {new Date().getFullYear()} KLASOO. {t('footer.rights')}</span>
           <span>{t('footer.company')}</span>
         </div>
       </div>
@@ -54,7 +54,7 @@ export function Footer({ onManageCookies }: { onManageCookies: () => void }) {
 
 export function CookieBanner({ onManageCookies }: { onManageCookies: () => void }) {
   const { t } = useI18n();
-  const [visible, setVisible] = useState(() => !localStorage.getItem('klaso_cookie_choice'));
+  const [visible, setVisible] = useState(() => !localStorage.getItem('klasoo_cookie_choice'));
   const [customizing, setCustomizing] = useState(false);
   const [prefs, setPrefs] = useState({ necessary: true, analytics: false, marketing: false });
 
@@ -66,7 +66,7 @@ export function CookieBanner({ onManageCookies }: { onManageCookies: () => void 
       : choice === 'none'
         ? { necessary: true, analytics: false, marketing: false }
         : prefs;
-    localStorage.setItem('klaso_cookie_choice', JSON.stringify(stored));
+    localStorage.setItem('klasoo_cookie_choice', JSON.stringify(stored));
     setVisible(false);
   };
 
