@@ -34,6 +34,73 @@ policies one by one.
   without a chicken-and-egg lockout.
 */
 
+-- Ensure the trial/subscription helper functions exist (self-contained: this
+-- migration must not depend on 008_trial_plan_gating having been applied first).
+CREATE OR REPLACE FUNCTION public.school_subscription_active(school_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.schools s
+    WHERE s.id = school_id
+    AND (
+      (s.subscription_status = 'trial' AND s.trial_ends_at > now())
+      OR s.subscription_status IN ('active', 'lifetime')
+    )
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.school_plan_modules(school_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT p.modules
+  FROM public.schools s
+  JOIN public.plans p ON p.id = s.plan_id
+  WHERE s.id = school_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.school_has_module(school_id uuid, module_key text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    EXISTS (
+      SELECT 1 FROM public.schools s
+      WHERE s.id = school_id
+      AND s.subscription_status = 'trial'
+      AND s.trial_ends_at > now()
+    )
+    OR
+    (
+      EXISTS (
+        SELECT 1 FROM public.schools s
+        WHERE s.id = school_id
+        AND s.subscription_status IN ('active', 'lifetime')
+      )
+      AND EXISTS (
+        SELECT 1
+        FROM public.schools s
+        JOIN public.plans p ON p.id = s.plan_id
+        WHERE s.id = school_id
+        AND p.modules ? module_key
+      )
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.school_subscription_active(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.school_plan_modules(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.school_has_module(uuid, text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.is_school_admin(check_school_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT (
