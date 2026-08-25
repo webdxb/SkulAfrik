@@ -497,7 +497,8 @@ function LiveChatSection() {
 
   async function closeConversation() {
     if (!activeId) return;
-    await supabase.from('chat_conversations').update({ status: 'closed' }).eq('id', activeId);
+    const { error } = await supabase.from('chat_conversations').update({ status: 'closed' }).eq('id', activeId);
+    if (error) { showError(error.message); return; }
     setActiveId(null);
   }
 

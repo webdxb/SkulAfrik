@@ -8,21 +8,21 @@ export default {
         sans: ['Glacial Indifference', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // PayPal brand blues (Pal Blue / dark #003087, Pay Blue / light #009CDE)
-        // mapped onto Tailwind's indigo scale so every existing indigo-XXX class
-        // in the app picks these up automatically.
+        // Klasoo brand violet, matching the official logo (#6D28D9), mapped onto
+        // Tailwind's indigo scale so every existing indigo-XXX class across the
+        // app picks it up automatically — one single source of brand color truth.
         indigo: {
-          50: '#eaf3fb',
-          100: '#cfe4f6',
-          200: '#a3cbee',
-          300: '#6fadE3',
-          400: '#3d90d6',
-          500: '#0079C1', // PayPal "Pal Blue" accent
-          600: '#009CDE', // PayPal light blue
-          700: '#00457C', // PayPal darker accent blue
-          800: '#003087', // PayPal primary dark blue
-          900: '#012169', // PayPal navy
-          950: '#001c4d',
+          50: '#f3eefc',
+          100: '#e4d7f8',
+          200: '#c9b0f2',
+          300: '#ab85ea',
+          400: '#8c5ce2',
+          500: '#7c3aed', // bright violet accent
+          600: '#6D28D9', // Klasoo primary (matches the logo)
+          700: '#5b21b6', // darker violet, hover states
+          800: '#4c1d95', // deep violet
+          900: '#3b1578',
+          950: '#28104f',
         },
       },
     },
