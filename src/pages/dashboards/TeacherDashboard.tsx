@@ -18,6 +18,7 @@ interface ClassRow {
   name: string;
   level: string | null;
   student_count: number;
+  is_homeroom: boolean;
 }
 
 interface ScheduleItem {
@@ -68,14 +69,24 @@ export function TeacherDashboard() {
     (async () => {
       setLoading(true);
 
-      // Classes assigned to this teacher
-      const { data: classRows } = await supabase
-        .from('classes')
-        .select('id, name, level')
-        .eq('homeroom_teacher_id', profile.id);
-      const teacherClasses = (classRows || []) as { id: string; name: string; level: string | null }[];
+      // Classes this teacher is involved with: homeroom classes AND classes
+      // where they teach a subject (class_subjects), which was previously
+      // missing — a subject-only teacher would see "0 classes / 0 students".
+      const [homeroomRes, subjectClassesRes] = await Promise.all([
+        supabase.from('classes').select('id, name, level').eq('homeroom_teacher_id', profile.id),
+        supabase.from('class_subjects').select('class:classes(id, name, level)').eq('teacher_id', profile.id),
+      ]);
+      const homeroomClasses = (homeroomRes.data || []) as { id: string; name: string; level: string | null }[];
+      const subjectClasses = (subjectClassesRes.data || []).map((r: any) => r.class).filter(Boolean) as { id: string; name: string; level: string | null }[];
+      const seen = new Set<string>();
+      const teacherClasses = [...homeroomClasses, ...subjectClasses].filter((c) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
 
       // Student counts per class
+      const homeroomIds = new Set(homeroomClasses.map((c) => c.id));
       const classStats: ClassRow[] = [];
       let studentTotal = 0;
       for (const c of teacherClasses) {
@@ -83,7 +94,7 @@ export function TeacherDashboard() {
           .from('students')
           .select('id', { count: 'exact', head: true })
           .eq('class_id', c.id);
-        classStats.push({ id: c.id, name: c.name, level: c.level, student_count: count || 0 });
+        classStats.push({ id: c.id, name: c.name, level: c.level, student_count: count || 0, is_homeroom: homeroomIds.has(c.id) });
         studentTotal += count || 0;
       }
       if (cancelled) return;
@@ -290,8 +301,13 @@ export function TeacherDashboard() {
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{c.student_count}</span>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                    Voir les détails <ArrowRight size={14} />
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.is_homeroom ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                      {c.is_homeroom ? 'Titulaire' : 'Matière'}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                      Voir <ArrowRight size={14} />
+                    </span>
                   </div>
                 </Card>
               </button>

@@ -51,6 +51,7 @@ export function StudentDashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState<EventRow[]>([]);
   const [className, setClassName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notLinked, setNotLinked] = useState(false);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -68,6 +69,7 @@ export function StudentDashboard() {
       if (cancelled) return;
 
       if (!eleve) {
+        setNotLinked(true);
         setLoading(false);
         return;
       }
@@ -142,6 +144,26 @@ export function StudentDashboard() {
 
   if (!profile) {
     return <EmptyState icon={GraduationCap} message="Profil introuvable. Veuillez vous reconnecter." />;
+  }
+
+  if (!loading && notLinked) {
+    return (
+      <div>
+        <PageHeader title={`Bonjour, ${profile.first_name || 'Élève'}`} subtitle="Espace élève" />
+        <Card className="p-8 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center">
+            <GraduationCap className="text-amber-600 dark:text-amber-400" size={22} />
+          </div>
+          <h2 className="mt-4 font-heading text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Votre compte n'est pas encore lié à une fiche élève
+          </h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            Vos notes, présences et le reste de vos informations n'apparaîtront qu'une fois votre compte relié par
+            l'administration de votre établissement. Contactez-la si cela n'a pas encore été fait.
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   return (
