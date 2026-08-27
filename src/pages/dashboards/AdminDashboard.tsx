@@ -16,6 +16,8 @@ import {
   ClipboardList,
   Calendar,
   FileText,
+  Clock,
+  Rocket,
 } from 'lucide-react';
 
 interface Stats {
@@ -100,12 +102,60 @@ export function AdminDashboard() {
   const balance = (stats?.revenue || 0) - (stats?.expenses || 0);
   const currency = school.currency || getCurrencyForCountryName(school.country);
 
+  const trialDaysLeft = school.subscription_status === 'trial' && school.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(school.trial_ends_at).getTime() - Date.now()) / 86400000))
+    : null;
+
+  const isNewSchool = !loading && stats && stats.students === 0 && stats.teachers === 0 && stats.classes === 0;
+
   return (
     <div>
       <PageHeader
         title={`Bonjour, ${profile?.first_name || 'Administrateur'}`}
         subtitle={`${school.name} — Vue d'ensemble de l'établissement`}
       />
+
+      {trialDaysLeft !== null && (
+        <div className={`mb-6 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${trialDaysLeft <= 3 ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : 'border-indigo-200 bg-indigo-50 dark:border-indigo-900 dark:bg-indigo-950/30'}`}>
+          <div className="flex items-center gap-3">
+            <Clock className={trialDaysLeft <= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'} size={18} />
+            <p className={`text-sm font-medium ${trialDaysLeft <= 3 ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300'}`}>
+              {trialDaysLeft === 0 ? "Votre essai gratuit se termine aujourd'hui." : `Votre essai gratuit se termine dans ${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''}.`}
+            </p>
+          </div>
+          <button onClick={() => navigate('/dashboard/pricing')} className="flex-shrink-0 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+            Voir les plans
+          </button>
+        </div>
+      )}
+
+      {isNewSchool && (
+        <Card className="mb-6 p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 p-2.5">
+              <Rocket className="text-indigo-600 dark:text-indigo-400" size={20} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-heading text-base font-semibold text-slate-900 dark:text-slate-100">Bienvenue sur Klasoo 👋</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Votre établissement est prêt. Voici par où commencer :</p>
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button onClick={() => navigate('/dashboard/classes')} className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-400">1</span>
+                  Créer vos classes
+                </button>
+                <button onClick={() => navigate('/dashboard/students')} className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-400">2</span>
+                  Ajouter des élèves
+                </button>
+                <button onClick={() => navigate('/dashboard/teachers')} className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-400">3</span>
+                  Inviter vos enseignants
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
